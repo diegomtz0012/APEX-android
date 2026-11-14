@@ -24,6 +24,8 @@ sealed class AppError(val message: String) {
     // Protocolo OBD / ELM327
     data object NoData : AppError("El vehículo no entregó datos (NO DATA).")
     data object AdapterError : AppError("El adaptador reportó un error (ERROR).")
+    data object VehicleUnreachable :
+        AppError("El adaptador no logró hablar con la ECU. Revisa que el carro esté en contacto y que el ELM327 esté bien puesto.")
     data class CorruptResponse(val raw: String) : AppError("Respuesta ilegible: $raw")
 
     // Inesperado
