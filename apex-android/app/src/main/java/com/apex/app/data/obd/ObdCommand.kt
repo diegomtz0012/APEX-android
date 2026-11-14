@@ -26,6 +26,13 @@ abstract class ObdCommand<out T>(
         return when {
             upper.contains("NO DATA") || upper.contains("NODATA") ->
                 Result.Failure(AppError.NoData)
+            // El adaptador no logró enlazar con la ECU del vehículo.
+            upper.contains("UNABLE TO CONNECT") ||
+                upper.contains("BUS INIT") ||
+                upper.contains("BUSINIT") ||
+                upper.contains("CAN ERROR") ||
+                upper.contains("STOPPED") ->
+                Result.Failure(AppError.VehicleUnreachable)
             upper.contains("ERROR") ->
                 Result.Failure(AppError.AdapterError)
             upper.contains("?") ->
