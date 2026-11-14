@@ -18,9 +18,6 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Instalar el SDK de Android
-        uses: android-actions/setup-android@v3
-
       - name: Instalar Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -35,9 +32,3 @@ jobs:
         with:
           name: apex-debug-apk
           path: apex-android/app/build/outputs/apk/debug/app-debug.apk
-
-      - name: Publicar el APK como artefacto descargable
-        uses: actions/upload-artifact@v4
-        with:
-          name: apex-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
