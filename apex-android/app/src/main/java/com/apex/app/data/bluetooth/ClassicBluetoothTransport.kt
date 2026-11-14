@@ -88,7 +88,10 @@ class ClassicBluetoothTransport(
         address: String
     ): Result<Unit> {
         return try {
-            currentAdapter.cancelDiscovery()
+            // cancelDiscovery() requiere BLUETOOTH_SCAN en Android 12+. Es solo una
+            // optimización para acelerar la conexión, así que si falta el permiso
+            // lo ignoramos en vez de abortar la conexión completa.
+            runCatching { currentAdapter.cancelDiscovery() }
             val device = currentAdapter.getRemoteDevice(address)
             val newSocket = device.createRfcommSocketToServiceRecord(SPP_UUID)
             newSocket.connect()
