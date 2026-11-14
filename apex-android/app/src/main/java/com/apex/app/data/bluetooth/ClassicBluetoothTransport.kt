@@ -109,10 +109,13 @@ class ClassicBluetoothTransport(
             Result.Success(Unit)
         } catch (e: SecurityException) {
             closeQuietly()
-            Result.Failure(AppError.BluetoothPermissionDenied)
+            // DIAGNÓSTICO: mostramos el mensaje real de Android para saber
+            // qué permiso o qué paso está fallando exactamente.
+            Result.Failure(AppError.Unknown("SEGURIDAD en connect(): ${e.message}"))
         } catch (e: Exception) {
             closeQuietly()
-            Result.Failure(AppError.ConnectionFailed)
+            // DIAGNÓSTICO: tipo de excepción + mensaje real.
+            Result.Failure(AppError.Unknown("${e.javaClass.simpleName} en connect(): ${e.message}"))
         }
     }
 
