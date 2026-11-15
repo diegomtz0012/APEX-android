@@ -38,29 +38,24 @@ class MainActivity : ComponentActivity() {
         // osmdroid necesita un user-agent para descargar los mosaicos del mapa.
         Configuration.getInstance().userAgentValue = packageName
 
-        // Inyección manual simple.
-        // --- Lectura OBD (Bluetooth) ---
-        val manager = getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
-        val adapter = manager?.adapter
-        val transport = ClassicBluetoothTransport(adapter)
+        // Dependencias compartidas (misma conexión OBD para app y servicio).
+        ServiceGraph.init(this)
+        val transport = ServiceGraph.transport
+        val speedProvider = ServiceGraph.speedProvider
+        val vehicleRepo = ServiceGraph.vehicleRepo
         val initializer = ObdInitializer(transport)
-
-        // --- Perfil del vehículo (lo usa el barrido para autocompletarse) ---
-        val vehicleRepo = VehicleProfileRepository(applicationContext)
 
         val liveFactory = LiveViewModel.Factory(transport, initializer, vehicleRepo)
 
         // --- Medición de pique (GPS) ---
-        val speedProvider = SpeedProvider(applicationContext)
         val historyRepo = DragHistoryRepository(applicationContext)
         val measureFactory = MeasureViewModel.Factory(speedProvider, historyRepo)
 
         // --- Escáner de fallas (usa el MISMO transporte OBD) ---
         val scannerFactory = ScannerViewModel.Factory(transport)
 
-        // --- Viajes (GPS + mapa + consumo opcional vía OBD) ---
-        val tripRepo = TripRepository(applicationContext)
-        val tripFactory = TripViewModel.Factory(speedProvider, transport, tripRepo, vehicleRepo)
+        // --- Viajes (la grabación corre en TripService, en primer plano) ---
+        val tripFactory = TripViewModel.Factory(applicationContext)
 
         // --- Dinamómetro virtual (GPS + peso + RPM opcional) ---
         val dynoFactory = DynoViewModel.Factory(speedProvider, transport, vehicleRepo)
@@ -87,6 +82,10 @@ class MainActivity : ComponentActivity() {
         }
         // Ubicación para la medición por GPS.
         permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        // Notificación del servicio de viajes (Android 13+).
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
         permissionLauncher.launch(permissions.toTypedArray())
     }
 }
