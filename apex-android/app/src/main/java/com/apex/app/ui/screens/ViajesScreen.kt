@@ -100,9 +100,18 @@ fun ViajesScreen(viewModel: TripViewModel) {
                 }
             }
 
+            if (state.recording && state.fuelLiters == null) {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = "💡 Para medir consumo, conéctate al OBD en “En vivo” antes del viaje (y que el carro reporte flujo de aire).",
+                    color = ApexColors.Muted,
+                    fontSize = 11.sp
+                )
+            }
+
             state.message?.let { msg ->
                 Spacer(Modifier.height(10.dp))
-                Text(text = msg, color = ApexColors.Orange, fontSize = 13.sp)
+                Text(text = msg, color = ApexColors.Cyan, fontSize = 13.sp)
             }
 
             Spacer(Modifier.height(14.dp))

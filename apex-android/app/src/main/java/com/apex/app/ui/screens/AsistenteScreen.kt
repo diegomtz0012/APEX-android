@@ -38,6 +38,7 @@ import com.apex.app.ui.ScannerViewModel
 import com.apex.app.ui.components.ApexCard
 import com.apex.app.ui.components.SectionLabel
 import com.apex.app.ui.theme.ApexColors
+import com.apex.app.ui.theme.ApexDisplay
 
 private enum class TipLevel { GOOD, INFO, WARN }
 private data class Tip(val level: TipLevel, val title: String, val text: String)
@@ -63,7 +64,14 @@ fun AsistenteScreen(
             .padding(16.dp)
     ) {
         SectionLabel("Asistente")
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "Coach APEX",
+            color = ApexColors.CoachText,
+            fontSize = 24.sp,
+            fontFamily = ApexDisplay,
+            fontWeight = FontWeight.Black
+        )
         Text(
             text = "Consejos a partir de tus datos",
             color = ApexColors.Muted,
