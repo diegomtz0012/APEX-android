@@ -132,16 +132,25 @@ private fun buildTips(
 
     // Diagnóstico en vivo
     if (connected) {
-        live.coolant?.let {
-            if (it >= 105) tips.add(Tip(TipLevel.WARN, "Temperatura alta ($it°C)", "El motor está caliente. Detente y revisa refrigerante, ventilador y termostato."))
-            else if (it in 80..100) tips.add(Tip(TipLevel.GOOD, "Temperatura normal ($it°C)", "El motor está en su rango ideal de operación."))
+        val coolant = live.coolant
+        if (coolant != null) {
+            if (coolant >= 105) {
+                tips.add(Tip(TipLevel.WARN, "Temperatura alta ($coolant°C)", "El motor está caliente. Detente y revisa refrigerante, ventilador y termostato."))
+            } else if (coolant in 80..100) {
+                tips.add(Tip(TipLevel.GOOD, "Temperatura normal ($coolant°C)", "El motor está en su rango ideal de operación."))
+            }
         }
-        live.voltage?.let {
-            if (running && it < 13.0f) tips.add(Tip(TipLevel.WARN, "Voltaje bajo (${"%.1f".format(it)}V)", "Con el motor andando debería estar sobre 13.5V. Revisa alternador y batería."))
-            else if (it > 15.0f) tips.add(Tip(TipLevel.WARN, "Voltaje alto (${"%.1f".format(it)}V)", "Puede indicar sobrecarga del regulador. Revísalo."))
+        val volt = live.voltage
+        if (volt != null) {
+            if (running && volt < 13.0f) {
+                tips.add(Tip(TipLevel.WARN, "Voltaje bajo (${"%.1f".format(volt)}V)", "Con el motor andando debería estar sobre 13.5V. Revisa alternador y batería."))
+            } else if (volt > 15.0f) {
+                tips.add(Tip(TipLevel.WARN, "Voltaje alto (${"%.1f".format(volt)}V)", "Puede indicar sobrecarga del regulador. Revísalo."))
+            }
         }
-        live.intakeTemp?.let {
-            if (it >= 55) tips.add(Tip(TipLevel.INFO, "Admisión caliente ($it°C)", "El aire caliente resta potencia. Una toma de aire frío o reubicar el filtro ayudaría."))
+        val iat = live.intakeTemp
+        if (iat != null && iat >= 55) {
+            tips.add(Tip(TipLevel.INFO, "Admisión caliente ($iat°C)", "El aire caliente resta potencia. Una toma de aire frío o reubicar el filtro ayudaría."))
         }
     } else {
         tips.add(Tip(TipLevel.INFO, "Conéctate para diagnóstico", "Conecta el ELM327 en “En vivo” para recibir consejos de temperatura, voltaje y más."))
