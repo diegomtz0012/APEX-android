@@ -11,7 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.apex.app.data.bluetooth.ClassicBluetoothTransport
 import com.apex.app.data.obd.ObdInitializer
-import com.apex.app.ui.LiveScreen
+import com.apex.app.ui.ApexApp
 import com.apex.app.ui.LiveViewModel
 import com.apex.app.ui.theme.ApexTheme
 
@@ -37,7 +37,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             ApexTheme {
                 val vm: LiveViewModel = viewModel(factory = factory)
-                LiveScreen(vm)
+                ApexApp(vm)
             }
         }
     }
