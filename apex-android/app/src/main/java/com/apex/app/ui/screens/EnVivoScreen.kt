@@ -78,6 +78,25 @@ fun EnVivoScreen(viewModel: LiveViewModel) {
                 }
             }
 
+            Spacer(Modifier.height(12.dp))
+            ApexCard(modifier = Modifier.fillMaxWidth()) {
+                Column {
+                    SectionLabel("Más datos")
+                    Spacer(Modifier.height(14.dp))
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        ExtraCell("Acelerador", state.throttle?.let { "$it%" }, Modifier.weight(1f))
+                        ExtraCell("Carga", state.load?.let { "$it%" }, Modifier.weight(1f))
+                        ExtraCell("Avance", state.timing?.let { "$it°" }, Modifier.weight(1f))
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        ExtraCell("MAP", state.map?.let { "$it" }, Modifier.weight(1f))
+                        ExtraCell("Admisión", state.intakeTemp?.let { "$it°" }, Modifier.weight(1f))
+                        ExtraCell("Voltaje", state.voltage?.let { "%.1f".format(it) }, Modifier.weight(1f))
+                    }
+                }
+            }
+
             Spacer(Modifier.height(16.dp))
             Button(
                 onClick = { viewModel.disconnect() },
@@ -172,6 +191,20 @@ fun EnVivoScreen(viewModel: LiveViewModel) {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ExtraCell(label: String, value: String?, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = value ?: "—",
+            color = ApexColors.Orange,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(text = label, color = ApexColors.Muted, fontSize = 10.sp)
     }
 }
 

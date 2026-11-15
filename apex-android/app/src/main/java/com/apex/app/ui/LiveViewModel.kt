@@ -9,8 +9,14 @@ import com.apex.app.data.bluetooth.ConnectionState
 import com.apex.app.data.bluetooth.ObdTransport
 import com.apex.app.data.obd.ObdInitializer
 import com.apex.app.data.obd.commands.CoolantCommand
+import com.apex.app.data.obd.commands.EngineLoadCommand
+import com.apex.app.data.obd.commands.IntakeTempCommand
+import com.apex.app.data.obd.commands.MapCommand
 import com.apex.app.data.obd.commands.RpmCommand
 import com.apex.app.data.obd.commands.SpeedCommand
+import com.apex.app.data.obd.commands.ThrottleCommand
+import com.apex.app.data.obd.commands.TimingAdvanceCommand
+import com.apex.app.data.obd.commands.VoltageCommand
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +32,13 @@ data class LiveUiState(
     val rpm: Int? = null,
     val speed: Int? = null,
     val coolant: Int? = null,
+    // Datos extra (se leen rotando, uno por ciclo)
+    val throttle: Int? = null,
+    val load: Int? = null,
+    val map: Int? = null,
+    val intakeTemp: Int? = null,
+    val timing: Int? = null,
+    val voltage: Float? = null,
     val log: List<String> = emptyList()
 )
 
@@ -45,7 +58,18 @@ class LiveViewModel(
     private val rpmCmd = RpmCommand()
     private val speedCmd = SpeedCommand()
     private val coolantCmd = CoolantCommand()
+    private val throttleCmd = ThrottleCommand()
+    private val loadCmd = EngineLoadCommand()
+    private val mapCmd = MapCommand()
+    private val intakeCmd = IntakeTempCommand()
+    private val timingCmd = TimingAdvanceCommand()
+    private val voltageCmd = VoltageCommand()
     private var pollJob: Job? = null
+
+    private val extraReaders: List<suspend () -> Unit> = listOf(
+        ::readThrottle, ::readLoad, ::readMap, ::readIntake, ::readTiming, ::readVoltage
+    )
+    private var extraIndex = 0
 
     init {
         viewModelScope.launch {
@@ -92,6 +116,9 @@ class LiveViewModel(
                 readRpm()
                 readSpeed()
                 readCoolant()
+                // Un dato extra por ciclo (rotando), para no frenar los medidores grandes.
+                extraReaders[extraIndex].invoke()
+                extraIndex = (extraIndex + 1) % extraReaders.size
                 delay(POLL_DELAY_MS)
             }
         }
@@ -118,6 +145,54 @@ class LiveViewModel(
         if (r is Result.Success) {
             val v = coolantCmd.parse(r.data)
             if (v is Result.Success) _ui.value = _ui.value.copy(coolant = v.data)
+        }
+    }
+
+    private suspend fun readThrottle() {
+        val r = transport.send(throttleCmd.command)
+        if (r is Result.Success) {
+            val v = throttleCmd.parse(r.data)
+            if (v is Result.Success) _ui.value = _ui.value.copy(throttle = v.data)
+        }
+    }
+
+    private suspend fun readLoad() {
+        val r = transport.send(loadCmd.command)
+        if (r is Result.Success) {
+            val v = loadCmd.parse(r.data)
+            if (v is Result.Success) _ui.value = _ui.value.copy(load = v.data)
+        }
+    }
+
+    private suspend fun readMap() {
+        val r = transport.send(mapCmd.command)
+        if (r is Result.Success) {
+            val v = mapCmd.parse(r.data)
+            if (v is Result.Success) _ui.value = _ui.value.copy(map = v.data)
+        }
+    }
+
+    private suspend fun readIntake() {
+        val r = transport.send(intakeCmd.command)
+        if (r is Result.Success) {
+            val v = intakeCmd.parse(r.data)
+            if (v is Result.Success) _ui.value = _ui.value.copy(intakeTemp = v.data)
+        }
+    }
+
+    private suspend fun readTiming() {
+        val r = transport.send(timingCmd.command)
+        if (r is Result.Success) {
+            val v = timingCmd.parse(r.data)
+            if (v is Result.Success) _ui.value = _ui.value.copy(timing = v.data)
+        }
+    }
+
+    private suspend fun readVoltage() {
+        val r = transport.send(voltageCmd.command)
+        if (r is Result.Success) {
+            val v = voltageCmd.parse(r.data)
+            if (v is Result.Success) _ui.value = _ui.value.copy(voltage = v.data)
         }
     }
 
