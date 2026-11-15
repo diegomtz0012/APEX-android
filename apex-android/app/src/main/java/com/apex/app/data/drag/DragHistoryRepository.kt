@@ -5,11 +5,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 
-/**
- * Guarda y lee el historial de piques en un archivo JSON local
- * (en el almacenamiento interno de la app). Sin base de datos ni
- * dependencias externas: simple y confiable.
- */
+/** Guarda y lee el historial de mediciones en un archivo JSON local. */
 class DragHistoryRepository(context: Context) {
 
     private val file: File = File(context.filesDir, "drag_history.json")
@@ -25,9 +21,10 @@ class DragHistoryRepository(context: Context) {
                     DragResult(
                         id = o.getLong("id"),
                         dateMillis = o.getLong("dateMillis"),
-                        time0to60Ms = if (o.isNull("t60")) null else o.getLong("t60"),
-                        time0to100Ms = if (o.isNull("t100")) null else o.getLong("t100"),
-                        topSpeedKmh = o.getInt("top")
+                        test = o.optString("test", "0-100 km/h"),
+                        timeMs = if (o.isNull("timeMs")) null else o.getLong("timeMs"),
+                        topSpeedKmh = o.getInt("top"),
+                        note = if (o.isNull("note")) null else o.optString("note", null)
                     )
                 )
             }
@@ -43,9 +40,10 @@ class DragHistoryRepository(context: Context) {
             val o = JSONObject()
             o.put("id", r.id)
             o.put("dateMillis", r.dateMillis)
-            o.put("t60", r.time0to60Ms ?: JSONObject.NULL)
-            o.put("t100", r.time0to100Ms ?: JSONObject.NULL)
+            o.put("test", r.test)
+            o.put("timeMs", r.timeMs ?: JSONObject.NULL)
             o.put("top", r.topSpeedKmh)
+            o.put("note", r.note ?: JSONObject.NULL)
             array.put(o)
         }
         runCatching { file.writeText(array.toString()) }

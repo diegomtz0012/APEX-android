@@ -1,13 +1,14 @@
 package com.apex.app.data.drag
 
 /**
- * Resultado de una medición de aceleración (pique).
- * Los tiempos están en milisegundos; null si no se alcanzó esa marca.
+ * Resultado de una medición (pique / prueba).
+ * Generalizado para soportar 0-100, 0-200, ¼ milla, 60-100, 80-120, etc.
  */
 data class DragResult(
-    val id: Long,              // marca de tiempo única (epoch millis)
-    val dateMillis: Long,      // cuándo se hizo
-    val time0to60Ms: Long?,    // 0-60 km/h
-    val time0to100Ms: Long?,   // 0-100 km/h
-    val topSpeedKmh: Int       // velocidad máxima alcanzada en la corrida
+    val id: Long,
+    val dateMillis: Long,
+    val test: String,          // nombre de la prueba, ej "0-100 km/h"
+    val timeMs: Long?,         // tiempo principal del resultado
+    val topSpeedKmh: Int,      // velocidad máxima alcanzada
+    val note: String?          // detalle extra, ej "0-60: 4.52 s" o "trap: 118 km/h"
 )

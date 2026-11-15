@@ -12,7 +12,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.History
-import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,7 +41,7 @@ fun HistorialScreen(viewModel: MeasureViewModel) {
         ComingSoonScreen(
             icon = Icons.Rounded.History,
             title = "Sin mediciones aún",
-            description = "Cuando hagas un pique en la pestaña “Medir”, quedará guardado aquí."
+            description = "Cuando hagas una prueba en “Medir”, quedará guardada aquí."
         )
         return
     }
@@ -54,8 +53,6 @@ fun HistorialScreen(viewModel: MeasureViewModel) {
             .padding(horizontal = 16.dp)
             .padding(top = 16.dp, bottom = 24.dp)
     ) {
-        SectionLabel("Historial")
-        Spacer(Modifier.height(4.dp))
         Text(
             text = "${runs.size} ${if (runs.size == 1) "medición" else "mediciones"}",
             color = ApexColors.Muted,
@@ -82,37 +79,49 @@ fun HistorialScreen(viewModel: MeasureViewModel) {
 private fun RunCard(run: DragResult) {
     ApexCard(modifier = Modifier.fillMaxWidth()) {
         Column {
-            Text(
-                text = formatDate(run.dateMillis),
-                color = ApexColors.Muted,
-                fontSize = 11.sp,
-                fontFamily = FontFamily.Monospace
-            )
-            Spacer(Modifier.height(12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Metric("0-100", formatSeconds(run.time0to100Ms), big = true)
-                Metric("0-60", formatSeconds(run.time0to60Ms), big = false)
-                Metric("Máx", "${run.topSpeedKmh} km/h", big = false)
+                Column {
+                    Text(
+                        text = run.test,
+                        color = ApexColors.Text,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = formatDate(run.dateMillis),
+                        color = ApexColors.Muted,
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                }
+                Text(
+                    text = formatSeconds(run.timeMs),
+                    color = ApexColors.Orange,
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = run.note ?: "",
+                    color = ApexColors.Muted,
+                    fontSize = 12.sp
+                )
+                Text(
+                    text = "máx ${run.topSpeedKmh} km/h",
+                    color = ApexColors.Muted,
+                    fontSize = 12.sp
+                )
             }
         }
-    }
-}
-
-@Composable
-private fun Metric(label: String, value: String, big: Boolean) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = value,
-            color = ApexColors.Orange,
-            fontSize = if (big) 26.sp else 16.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(Modifier.height(2.dp))
-        Text(text = label, color = ApexColors.Muted, fontSize = 11.sp)
     }
 }
 
