@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.apex.app.data.vehicle.VehicleProfileRepository
 import com.apex.app.ui.screens.CarroScreen
+import com.apex.app.ui.screens.DynoScreen
 import com.apex.app.ui.screens.EnVivoScreen
 import com.apex.app.ui.screens.EscanerScreen
 import com.apex.app.ui.screens.HistorialScreen
@@ -52,6 +53,7 @@ fun ApexApp(
     measureViewModel: MeasureViewModel,
     scannerViewModel: ScannerViewModel,
     tripViewModel: TripViewModel,
+    dynoViewModel: DynoViewModel,
     vehicleRepository: VehicleProfileRepository
 ) {
     var tab by rememberSaveable { mutableStateOf(0) }
@@ -103,6 +105,7 @@ fun ApexApp(
                     onBack = { moreDest = null },
                     measureViewModel = measureViewModel,
                     scannerViewModel = scannerViewModel,
+                    dynoViewModel = dynoViewModel,
                     vehicleRepository = vehicleRepository
                 )
             }
@@ -117,6 +120,7 @@ private fun MoreSection(
     onBack: () -> Unit,
     measureViewModel: MeasureViewModel,
     scannerViewModel: ScannerViewModel,
+    dynoViewModel: DynoViewModel,
     vehicleRepository: VehicleProfileRepository
 ) {
     if (dest == null) {
@@ -126,8 +130,9 @@ private fun MoreSection(
     Column(modifier = Modifier.fillMaxSize()) {
         BackBar(
             title = when (dest) {
-                "historial" -> "Historial de piques"
+                "historial" -> "Historial"
                 "escaner" -> "Escáner de fallas"
+                "dyno" -> "Dinamómetro"
                 else -> "Tu carro"
             },
             onBack = onBack
@@ -135,6 +140,7 @@ private fun MoreSection(
         when (dest) {
             "historial" -> HistorialScreen(measureViewModel)
             "escaner" -> EscanerScreen(scannerViewModel)
+            "dyno" -> DynoScreen(dynoViewModel)
             else -> CarroScreen(vehicleRepository)
         }
     }

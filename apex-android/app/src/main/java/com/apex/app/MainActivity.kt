@@ -16,6 +16,7 @@ import com.apex.app.data.obd.ObdInitializer
 import com.apex.app.data.trip.TripRepository
 import com.apex.app.data.vehicle.VehicleProfileRepository
 import com.apex.app.ui.ApexApp
+import com.apex.app.ui.DynoViewModel
 import com.apex.app.ui.LiveViewModel
 import com.apex.app.ui.MeasureViewModel
 import com.apex.app.ui.ScannerViewModel
@@ -60,13 +61,17 @@ class MainActivity : ComponentActivity() {
         val tripRepo = TripRepository(applicationContext)
         val tripFactory = TripViewModel.Factory(speedProvider, transport, tripRepo, vehicleRepo)
 
+        // --- Dinamómetro virtual (GPS + peso + RPM opcional) ---
+        val dynoFactory = DynoViewModel.Factory(speedProvider, transport, vehicleRepo)
+
         setContent {
             ApexTheme {
                 val liveVm: LiveViewModel = viewModel(factory = liveFactory)
                 val measureVm: MeasureViewModel = viewModel(factory = measureFactory)
                 val scannerVm: ScannerViewModel = viewModel(factory = scannerFactory)
                 val tripVm: TripViewModel = viewModel(factory = tripFactory)
-                ApexApp(liveVm, measureVm, scannerVm, tripVm, vehicleRepo)
+                val dynoVm: DynoViewModel = viewModel(factory = dynoFactory)
+                ApexApp(liveVm, measureVm, scannerVm, tripVm, dynoVm, vehicleRepo)
             }
         }
     }

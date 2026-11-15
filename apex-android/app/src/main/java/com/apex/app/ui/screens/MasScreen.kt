@@ -15,6 +15,7 @@ import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.ShowChart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,7 +39,11 @@ fun MasScreen(onSelect: (String) -> Unit) {
         SectionLabel("Más")
         Spacer(Modifier.height(14.dp))
 
-        MasItem(Icons.Rounded.History, "Historial de piques", "Tus mediciones 0-100 guardadas") {
+        MasItem(Icons.Rounded.ShowChart, "Dinamómetro", "Estima la potencia y el torque de tu carro") {
+            onSelect("dyno")
+        }
+        Spacer(Modifier.height(10.dp))
+        MasItem(Icons.Rounded.History, "Historial de mediciones", "Tus piques y pruebas guardados") {
             onSelect("historial")
         }
         Spacer(Modifier.height(10.dp))
