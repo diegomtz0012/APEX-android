@@ -40,6 +40,7 @@ import com.apex.app.ui.TestType
 import com.apex.app.ui.components.ApexCard
 import com.apex.app.ui.components.SectionLabel
 import com.apex.app.ui.theme.ApexColors
+import com.apex.app.ui.theme.ApexDisplay
 
 @Composable
 fun MedirScreen(viewModel: MeasureViewModel) {
@@ -81,11 +82,11 @@ fun MedirScreen(viewModel: MeasureViewModel) {
         Text(
             text = formatSeconds(bigTime),
             color = ApexColors.Orange,
-            fontSize = 66.sp,
+            fontSize = 72.sp,
             fontWeight = FontWeight.Black,
-            fontFamily = FontFamily.Monospace
+            fontFamily = ApexDisplay
         )
-        Text(text = "segundos", color = ApexColors.Muted, fontSize = 13.sp)
+        Text(text = "SEGUNDOS", color = ApexColors.Faint, fontSize = 11.sp, fontFamily = com.apex.app.ui.theme.ApexMono, letterSpacing = 2.sp)
 
         Spacer(Modifier.height(8.dp))
         Text(

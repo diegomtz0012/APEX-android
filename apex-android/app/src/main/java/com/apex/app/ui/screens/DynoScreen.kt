@@ -33,6 +33,7 @@ import com.apex.app.ui.DynoViewModel
 import com.apex.app.ui.components.ApexCard
 import com.apex.app.ui.components.SectionLabel
 import com.apex.app.ui.theme.ApexColors
+import com.apex.app.ui.theme.ApexDisplay
 
 @Composable
 fun DynoScreen(viewModel: DynoViewModel) {
@@ -55,9 +56,9 @@ fun DynoScreen(viewModel: DynoViewModel) {
             Text(
                 text = if (state.phase == DynoPhase.RECORDING) "${state.curHp}" else "${state.peakHp}",
                 color = ApexColors.Orange,
-                fontSize = 72.sp,
+                fontSize = 76.sp,
                 fontWeight = FontWeight.Black,
-                fontFamily = FontFamily.Monospace
+                fontFamily = ApexDisplay
             )
             Text(
                 text = if (state.phase == DynoPhase.RECORDING) "HP ahora" else "HP máx estimados",

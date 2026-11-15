@@ -29,6 +29,7 @@ import com.apex.app.ui.components.ApexCard
 import com.apex.app.ui.components.SectionLabel
 import com.apex.app.ui.components.StatusDot
 import com.apex.app.ui.theme.ApexColors
+import com.apex.app.ui.theme.ApexDisplay
 
 @Composable
 fun InicioScreen(viewModel: LiveViewModel, onGoLive: () -> Unit) {
@@ -45,14 +46,17 @@ fun InicioScreen(viewModel: LiveViewModel, onGoLive: () -> Unit) {
         Text(
             text = "APEX",
             color = ApexColors.Orange,
-            fontSize = 34.sp,
+            fontSize = 40.sp,
             fontWeight = FontWeight.Black,
-            letterSpacing = 2.sp
+            fontFamily = ApexDisplay,
+            letterSpacing = 6.sp
         )
         Text(
-            text = "Rendimiento real · ELM327",
-            color = ApexColors.Muted,
-            fontSize = 13.sp
+            text = "RENDIMIENTO REAL · ELM327",
+            color = ApexColors.Faint,
+            fontSize = 11.sp,
+            fontFamily = com.apex.app.ui.theme.ApexMono,
+            letterSpacing = 1.sp
         )
 
         Spacer(Modifier.height(22.dp))
@@ -122,7 +126,7 @@ private fun MiniStat(label: String, value: String, modifier: Modifier = Modifier
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(text = value, color = ApexColors.Orange, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-        Text(text = label, color = ApexColors.Muted, fontSize = 11.sp)
+        Text(text = value, color = ApexColors.Orange, fontSize = 26.sp, fontWeight = FontWeight.Black, fontFamily = ApexDisplay)
+        Text(text = label, color = ApexColors.Faint, fontSize = 10.sp, fontFamily = com.apex.app.ui.theme.ApexMono)
     }
 }

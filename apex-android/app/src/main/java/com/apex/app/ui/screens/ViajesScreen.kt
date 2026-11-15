@@ -41,6 +41,7 @@ import com.apex.app.ui.components.ApexCard
 import com.apex.app.ui.components.SectionLabel
 import com.apex.app.ui.share.ShareUtils
 import com.apex.app.ui.theme.ApexColors
+import com.apex.app.ui.theme.ApexDisplay
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -119,8 +120,8 @@ fun ViajesScreen(viewModel: TripViewModel) {
                     onClick = { selected = null; viewModel.start() },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = ApexColors.Orange,
-                        contentColor = ApexColors.OnOrange
+                        containerColor = ApexColors.Cyan,
+                        contentColor = ApexColors.OnCyan
                     )
                 ) { Text("Iniciar viaje", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
             }
@@ -170,7 +171,7 @@ private fun TripMap(route: List<LatLng>) {
             if (route.isNotEmpty()) {
                 val line = Polyline(map)
                 line.setPoints(route.map { GeoPoint(it.lat, it.lon) })
-                line.outlinePaint.color = ApexColors.Orange.toArgb()
+                line.outlinePaint.color = ApexColors.Cyan.toArgb()
                 line.outlinePaint.strokeWidth = 12f
                 map.overlays.add(line)
                 val lastPoint = route.last()
@@ -184,9 +185,9 @@ private fun TripMap(route: List<LatLng>) {
 @Composable
 private fun Stat(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = value, color = ApexColors.Orange, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text(text = value, color = ApexColors.Cyan, fontSize = 20.sp, fontWeight = FontWeight.Black, fontFamily = ApexDisplay)
         Spacer(Modifier.height(2.dp))
-        Text(text = label, color = ApexColors.Muted, fontSize = 11.sp)
+        Text(text = label, color = ApexColors.Faint, fontSize = 10.sp, fontFamily = com.apex.app.ui.theme.ApexMono)
     }
 }
 
@@ -212,9 +213,10 @@ private fun TripCard(trip: Trip, selected: Boolean, onClick: () -> Unit, onShare
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "%.2f km".format(trip.distanceKm),
-                        color = ApexColors.Orange,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
+                        color = ApexColors.Cyan,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Black,
+                        fontFamily = ApexDisplay
                     )
                     Spacer(Modifier.width(12.dp))
                     Icon(
