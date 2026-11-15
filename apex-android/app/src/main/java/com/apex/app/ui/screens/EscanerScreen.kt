@@ -14,15 +14,20 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
@@ -43,6 +48,33 @@ fun EscanerScreen(viewModel: ScannerViewModel) {
     val state by viewModel.ui.collectAsState()
     val conn by viewModel.connection.collectAsState()
     val connected = conn is ConnectionState.Connected
+    var showConfirm by remember { mutableStateOf(false) }
+
+    if (showConfirm) {
+        AlertDialog(
+            onDismissRequest = { showConfirm = false },
+            containerColor = ApexColors.Surface,
+            title = { Text("¿Borrar códigos?", color = ApexColors.Text) },
+            text = {
+                Text(
+                    "Se borrarán los códigos de falla y se apagará el check engine. " +
+                        "Si el problema sigue, el código volverá a aparecer.",
+                    color = ApexColors.Muted
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showConfirm = false
+                    viewModel.clearCodes()
+                }) { Text("Borrar", color = ApexColors.Red) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirm = false }) {
+                    Text("Cancelar", color = ApexColors.Muted)
+                }
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -117,7 +149,7 @@ fun EscanerScreen(viewModel: ScannerViewModel) {
 
             Spacer(Modifier.height(6.dp))
             OutlinedButton(
-                onClick = { viewModel.clearCodes() },
+                onClick = { showConfirm = true },
                 enabled = connected && !state.scanning,
                 modifier = Modifier.fillMaxWidth()
             ) {
