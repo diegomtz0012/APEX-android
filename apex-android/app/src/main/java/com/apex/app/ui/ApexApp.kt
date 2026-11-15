@@ -33,7 +33,7 @@ import com.apex.app.ui.theme.ApexColors
 private data class NavItem(val label: String, val icon: ImageVector)
 
 @Composable
-fun ApexApp(viewModel: LiveViewModel) {
+fun ApexApp(viewModel: LiveViewModel, measureViewModel: MeasureViewModel) {
     var tab by rememberSaveable { mutableStateOf(0) }
 
     val items = listOf(
@@ -74,8 +74,8 @@ fun ApexApp(viewModel: LiveViewModel) {
             when (tab) {
                 0 -> InicioScreen(viewModel, onGoLive = { tab = 1 })
                 1 -> EnVivoScreen(viewModel)
-                2 -> MedirScreen()
-                3 -> HistorialScreen()
+                2 -> MedirScreen(measureViewModel)
+                3 -> HistorialScreen(measureViewModel)
                 else -> CarroScreen()
             }
         }

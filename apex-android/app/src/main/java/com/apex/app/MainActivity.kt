@@ -10,9 +10,12 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.apex.app.data.bluetooth.ClassicBluetoothTransport
+import com.apex.app.data.drag.DragHistoryRepository
+import com.apex.app.data.location.SpeedProvider
 import com.apex.app.data.obd.ObdInitializer
 import com.apex.app.ui.ApexApp
 import com.apex.app.ui.LiveViewModel
+import com.apex.app.ui.MeasureViewModel
 import com.apex.app.ui.theme.ApexTheme
 
 class MainActivity : ComponentActivity() {
@@ -24,33 +27,40 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        requestBluetoothPermissions()
+        requestPermissions()
 
-        // Inyección manual simple: creamos el transporte y el inicializador
-        // y los pasamos al ViewModel mediante su fábrica.
+        // Inyección manual simple.
+        // --- Lectura OBD (Bluetooth) ---
         val manager = getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
         val adapter = manager?.adapter
         val transport = ClassicBluetoothTransport(adapter)
         val initializer = ObdInitializer(transport)
-        val factory = LiveViewModel.Factory(transport, initializer)
+        val liveFactory = LiveViewModel.Factory(transport, initializer)
+
+        // --- Medición de pique (GPS) ---
+        val speedProvider = SpeedProvider(applicationContext)
+        val historyRepo = DragHistoryRepository(applicationContext)
+        val measureFactory = MeasureViewModel.Factory(speedProvider, historyRepo)
 
         setContent {
             ApexTheme {
-                val vm: LiveViewModel = viewModel(factory = factory)
-                ApexApp(vm)
+                val liveVm: LiveViewModel = viewModel(factory = liveFactory)
+                val measureVm: MeasureViewModel = viewModel(factory = measureFactory)
+                ApexApp(liveVm, measureVm)
             }
         }
     }
 
-    private fun requestBluetoothPermissions() {
-        val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            arrayOf(Manifest.permission.BLUETOOTH_CONNECT)
+    private fun requestPermissions() {
+        val permissions = mutableListOf<String>()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
         } else {
-            arrayOf(
-                Manifest.permission.BLUETOOTH,
-                Manifest.permission.BLUETOOTH_ADMIN
-            )
+            permissions.add(Manifest.permission.BLUETOOTH)
+            permissions.add(Manifest.permission.BLUETOOTH_ADMIN)
         }
-        permissionLauncher.launch(permissions)
+        // Ubicación para la medición por GPS.
+        permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        permissionLauncher.launch(permissions.toTypedArray())
     }
 }
