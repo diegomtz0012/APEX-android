@@ -29,3 +29,13 @@ class CoolantCommand : ObdCommand<Int>(
 ) {
     override fun decode(bytes: List<Int>): Int = bytes[0] - 40
 }
+
+/**
+ * PID 10 — Flujo másico de aire (MAF).  Fórmula: (A * 256 + B) / 100  (g/s)
+ * Se usa para estimar el consumo de combustible durante un viaje.
+ */
+class MafCommand : ObdCommand<Float>(
+    mode = Constants.ObdMode.LIVE_DATA, pid = "10", name = "MAF", unit = "g/s"
+) {
+    override fun decode(bytes: List<Int>): Float = (bytes[0] * 256 + bytes[1]) / 100f
+}

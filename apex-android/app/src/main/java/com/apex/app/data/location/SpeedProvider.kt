@@ -15,6 +15,14 @@ import kotlinx.coroutines.flow.callbackFlow
 /** Una muestra de velocidad del GPS, con su marca de tiempo en nanosegundos. */
 data class SpeedSample(val kmh: Float, val timeNanos: Long)
 
+/** Un punto del GPS con ubicación, velocidad y tiempo (para la ruta de viajes). */
+data class GpsPoint(
+    val lat: Double,
+    val lon: Double,
+    val kmh: Float,
+    val timeMillis: Long
+)
+
 /**
  * Entrega la velocidad del vehículo usando el GPS del teléfono (efecto Doppler).
  * Es el mismo principio de un Dragy. La precisión depende del GPS del equipo.
@@ -67,6 +75,47 @@ class SpeedProvider(private val context: Context) {
         }
 
         // callbackFlow EXIGE awaitClose al final (siempre se alcanza).
+        awaitClose { lm?.removeUpdates(listener) }
+    }
+
+    /** Flujo con la ubicación completa (lat/lon + velocidad), para grabar rutas. */
+    @SuppressLint("MissingPermission")
+    fun locationFlow(): Flow<GpsPoint> = callbackFlow {
+        val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+
+        val listener = object : LocationListener {
+            override fun onLocationChanged(location: Location) {
+                val kmh = if (location.hasSpeed()) location.speed * 3.6f else 0f
+                trySend(
+                    GpsPoint(
+                        lat = location.latitude,
+                        lon = location.longitude,
+                        kmh = kmh,
+                        timeMillis = System.currentTimeMillis()
+                    )
+                )
+            }
+
+            override fun onProviderEnabled(provider: String) {}
+            override fun onProviderDisabled(provider: String) {}
+        }
+
+        if (lm == null) {
+            close()
+        } else {
+            try {
+                lm.requestLocationUpdates(
+                    LocationManager.GPS_PROVIDER,
+                    0L,
+                    0f,
+                    listener,
+                    Looper.getMainLooper()
+                )
+            } catch (e: SecurityException) {
+                close(e)
+            }
+        }
+
         awaitClose { lm?.removeUpdates(listener) }
     }
 }

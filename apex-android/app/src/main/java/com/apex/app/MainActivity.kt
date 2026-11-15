@@ -13,12 +13,15 @@ import com.apex.app.data.bluetooth.ClassicBluetoothTransport
 import com.apex.app.data.drag.DragHistoryRepository
 import com.apex.app.data.location.SpeedProvider
 import com.apex.app.data.obd.ObdInitializer
+import com.apex.app.data.trip.TripRepository
 import com.apex.app.data.vehicle.VehicleProfileRepository
 import com.apex.app.ui.ApexApp
 import com.apex.app.ui.LiveViewModel
 import com.apex.app.ui.MeasureViewModel
 import com.apex.app.ui.ScannerViewModel
+import com.apex.app.ui.TripViewModel
 import com.apex.app.ui.theme.ApexTheme
+import org.osmdroid.config.Configuration
 
 class MainActivity : ComponentActivity() {
 
@@ -30,6 +33,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         requestPermissions()
+
+        // osmdroid necesita un user-agent para descargar los mosaicos del mapa.
+        Configuration.getInstance().userAgentValue = packageName
 
         // Inyección manual simple.
         // --- Lectura OBD (Bluetooth) ---
@@ -50,12 +56,17 @@ class MainActivity : ComponentActivity() {
         // --- Perfil del vehículo ---
         val vehicleRepo = VehicleProfileRepository(applicationContext)
 
+        // --- Viajes (GPS + mapa + consumo opcional vía OBD) ---
+        val tripRepo = TripRepository(applicationContext)
+        val tripFactory = TripViewModel.Factory(speedProvider, transport, tripRepo, vehicleRepo)
+
         setContent {
             ApexTheme {
                 val liveVm: LiveViewModel = viewModel(factory = liveFactory)
                 val measureVm: MeasureViewModel = viewModel(factory = measureFactory)
                 val scannerVm: ScannerViewModel = viewModel(factory = scannerFactory)
-                ApexApp(liveVm, measureVm, scannerVm, vehicleRepo)
+                val tripVm: TripViewModel = viewModel(factory = tripFactory)
+                ApexApp(liveVm, measureVm, scannerVm, tripVm, vehicleRepo)
             }
         }
     }

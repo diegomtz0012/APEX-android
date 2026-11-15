@@ -12,8 +12,12 @@
         android:name="android.permission.BLUETOOTH_ADMIN"
         android:maxSdkVersion="30" />
 
-    <!-- Ubicación: velocidad por GPS para la medición de pique -->
+    <!-- Ubicación: velocidad por GPS para la medición de pique y la ruta de viajes -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- Internet: descargar los mosaicos del mapa (OpenStreetMap) -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <uses-feature
         android:name="android.hardware.bluetooth"
