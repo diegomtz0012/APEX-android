@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.apex.app.data.vehicle.VehicleProfileRepository
+import com.apex.app.ui.screens.AsistenteScreen
 import com.apex.app.ui.screens.CarroScreen
 import com.apex.app.ui.screens.DynoScreen
 import com.apex.app.ui.screens.EnVivoScreen
@@ -103,6 +104,7 @@ fun ApexApp(
                     dest = moreDest,
                     onOpen = { moreDest = it },
                     onBack = { moreDest = null },
+                    liveViewModel = liveViewModel,
                     measureViewModel = measureViewModel,
                     scannerViewModel = scannerViewModel,
                     dynoViewModel = dynoViewModel,
@@ -118,6 +120,7 @@ private fun MoreSection(
     dest: String?,
     onOpen: (String) -> Unit,
     onBack: () -> Unit,
+    liveViewModel: LiveViewModel,
     measureViewModel: MeasureViewModel,
     scannerViewModel: ScannerViewModel,
     dynoViewModel: DynoViewModel,
@@ -130,6 +133,7 @@ private fun MoreSection(
     Column(modifier = Modifier.fillMaxSize()) {
         BackBar(
             title = when (dest) {
+                "asistente" -> "Asistente"
                 "historial" -> "Historial"
                 "escaner" -> "Escáner de fallas"
                 "dyno" -> "Dinamómetro"
@@ -138,6 +142,7 @@ private fun MoreSection(
             onBack = onBack
         )
         when (dest) {
+            "asistente" -> AsistenteScreen(liveViewModel, measureViewModel, scannerViewModel, vehicleRepository)
             "historial" -> HistorialScreen(measureViewModel)
             "escaner" -> EscanerScreen(scannerViewModel)
             "dyno" -> DynoScreen(dynoViewModel)
