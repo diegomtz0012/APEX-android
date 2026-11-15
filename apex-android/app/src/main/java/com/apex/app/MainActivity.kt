@@ -44,7 +44,11 @@ class MainActivity : ComponentActivity() {
         val adapter = manager?.adapter
         val transport = ClassicBluetoothTransport(adapter)
         val initializer = ObdInitializer(transport)
-        val liveFactory = LiveViewModel.Factory(transport, initializer)
+
+        // --- Perfil del vehículo (lo usa el barrido para autocompletarse) ---
+        val vehicleRepo = VehicleProfileRepository(applicationContext)
+
+        val liveFactory = LiveViewModel.Factory(transport, initializer, vehicleRepo)
 
         // --- Medición de pique (GPS) ---
         val speedProvider = SpeedProvider(applicationContext)
@@ -53,9 +57,6 @@ class MainActivity : ComponentActivity() {
 
         // --- Escáner de fallas (usa el MISMO transporte OBD) ---
         val scannerFactory = ScannerViewModel.Factory(transport)
-
-        // --- Perfil del vehículo ---
-        val vehicleRepo = VehicleProfileRepository(applicationContext)
 
         // --- Viajes (GPS + mapa + consumo opcional vía OBD) ---
         val tripRepo = TripRepository(applicationContext)

@@ -8,6 +8,10 @@ import com.apex.app.data.bluetooth.BluetoothDeviceInfo
 import com.apex.app.data.bluetooth.ConnectionState
 import com.apex.app.data.bluetooth.ObdTransport
 import com.apex.app.data.obd.ObdInitializer
+import com.apex.app.data.obd.VehicleInfo
+import com.apex.app.data.obd.VinDecoder
+import com.apex.app.data.vehicle.VehicleProfile
+import com.apex.app.data.vehicle.VehicleProfileRepository
 import com.apex.app.data.obd.commands.CoolantCommand
 import com.apex.app.data.obd.commands.EngineLoadCommand
 import com.apex.app.data.obd.commands.IntakeTempCommand
@@ -17,6 +21,7 @@ import com.apex.app.data.obd.commands.SpeedCommand
 import com.apex.app.data.obd.commands.ThrottleCommand
 import com.apex.app.data.obd.commands.TimingAdvanceCommand
 import com.apex.app.data.obd.commands.VoltageCommand
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +29,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Estado inmutable que la pantalla observa. */
 data class LiveUiState(
@@ -39,12 +45,14 @@ data class LiveUiState(
     val intakeTemp: Int? = null,
     val timing: Int? = null,
     val voltage: Float? = null,
+    val vehicle: VehicleInfo? = null,
     val log: List<String> = emptyList()
 )
 
 class LiveViewModel(
     private val transport: ObdTransport,
-    private val initializer: ObdInitializer
+    private val initializer: ObdInitializer,
+    private val vehicleRepo: VehicleProfileRepository
 ) : ViewModel() {
 
     private companion object {
@@ -94,6 +102,7 @@ class LiveViewModel(
                 is Result.Success -> {
                     appendLog("Conectado. Inicializando…")
                     initializer.initialize().forEach { appendLog(it) }
+                    scanVehicle()
                     startPolling()
                 }
                 is Result.Failure -> appendLog("Error: ${r.error.message}")
@@ -107,6 +116,54 @@ class LiveViewModel(
             transport.disconnect()
             appendLog("Desconectado.")
         }
+    }
+
+    /** Barrido inicial: lee VIN y combustible, decodifica y crea el perfil solo. */
+    private suspend fun scanVehicle() {
+        appendLog("Barrido del vehículo…")
+        var vin: String? = null
+        val vinResp = transport.send("0902")
+        if (vinResp is Result.Success) vin = VinDecoder.parseVin(vinResp.data)
+
+        var diesel: Boolean? = null
+        val fuelResp = transport.send("0151")
+        if (fuelResp is Result.Success) diesel = VinDecoder.parseFuelType(fuelResp.data)
+
+        if (vin == null && diesel == null) {
+            appendLog("El carro no entregó VIN ni tipo de combustible.")
+            return
+        }
+
+        var make: String? = null
+        var model: String? = null
+        var year: String? = null
+        if (vin != null) {
+            appendLog("VIN: $vin")
+            val online = withContext(Dispatchers.IO) { VinDecoder.decodeOnline(vin) }
+            if (online != null) {
+                make = online.first; model = online.second; year = online.third
+            }
+            if (make == null) make = VinDecoder.makeFromVin(vin)
+            if (year == null) year = VinDecoder.yearFromVin(vin)
+        }
+
+        val info = VehicleInfo(vin, make, model, year, diesel)
+        _ui.value = _ui.value.copy(vehicle = info)
+        val detected = listOfNotNull(make, model, year).joinToString(" ").ifBlank { "—" }
+        val fuelTxt = diesel?.let { if (it) " · Diésel" else " · Gasolina" } ?: ""
+        appendLog("Detectado: $detected$fuelTxt")
+
+        // Crear/actualizar el perfil sin pisar lo que el usuario ya haya puesto.
+        val current = vehicleRepo.load()
+        val updated = current.copy(
+            make = current.make.ifBlank { make ?: "" },
+            model = current.model.ifBlank { model ?: "" },
+            year = current.year.ifBlank { year ?: "" },
+            vin = current.vin.ifBlank { vin ?: "" },
+            diesel = diesel ?: current.diesel,
+            nickname = current.nickname.ifBlank { listOfNotNull(make, model).joinToString(" ") }
+        )
+        vehicleRepo.save(updated)
     }
 
     private fun startPolling() {
@@ -203,10 +260,11 @@ class LiveViewModel(
     /** Fábrica manual (inyección simple, sin Hilt por ahora). */
     class Factory(
         private val transport: ObdTransport,
-        private val initializer: ObdInitializer
+        private val initializer: ObdInitializer,
+        private val vehicleRepo: VehicleProfileRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            LiveViewModel(transport, initializer) as T
+            LiveViewModel(transport, initializer, vehicleRepo) as T
     }
 }

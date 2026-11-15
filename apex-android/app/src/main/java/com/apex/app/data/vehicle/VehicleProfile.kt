@@ -7,5 +7,6 @@ data class VehicleProfile(
     val model: String = "",
     val year: String = "",
     val weightKg: String = "",
-    val diesel: Boolean = false
+    val diesel: Boolean = false,
+    val vin: String = ""
 )

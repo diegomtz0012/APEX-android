@@ -62,10 +62,19 @@ fun CarroScreen(repository: VehicleProfileRepository) {
         SectionLabel("Tu carro")
         Spacer(Modifier.height(4.dp))
         Text(
-            text = "Guarda los datos de tu vehículo",
+            text = "Se autocompleta al conectar al carro. Puedes corregir cualquier dato.",
             color = ApexColors.Muted,
             fontSize = 12.sp
         )
+        if (initial.vin.isNotBlank()) {
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = "VIN: ${initial.vin}",
+                color = ApexColors.Cyan,
+                fontSize = 12.sp,
+                fontFamily = com.apex.app.ui.theme.ApexMono
+            )
+        }
         Spacer(Modifier.height(18.dp))
 
         Field("Apodo (ej. Mi Accent)", nickname) { nickname = it; saved = false }
