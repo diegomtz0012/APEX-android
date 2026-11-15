@@ -13,9 +13,11 @@ import com.apex.app.data.bluetooth.ClassicBluetoothTransport
 import com.apex.app.data.drag.DragHistoryRepository
 import com.apex.app.data.location.SpeedProvider
 import com.apex.app.data.obd.ObdInitializer
+import com.apex.app.data.vehicle.VehicleProfileRepository
 import com.apex.app.ui.ApexApp
 import com.apex.app.ui.LiveViewModel
 import com.apex.app.ui.MeasureViewModel
+import com.apex.app.ui.ScannerViewModel
 import com.apex.app.ui.theme.ApexTheme
 
 class MainActivity : ComponentActivity() {
@@ -42,11 +44,18 @@ class MainActivity : ComponentActivity() {
         val historyRepo = DragHistoryRepository(applicationContext)
         val measureFactory = MeasureViewModel.Factory(speedProvider, historyRepo)
 
+        // --- Escáner de fallas (usa el MISMO transporte OBD) ---
+        val scannerFactory = ScannerViewModel.Factory(transport)
+
+        // --- Perfil del vehículo ---
+        val vehicleRepo = VehicleProfileRepository(applicationContext)
+
         setContent {
             ApexTheme {
                 val liveVm: LiveViewModel = viewModel(factory = liveFactory)
                 val measureVm: MeasureViewModel = viewModel(factory = measureFactory)
-                ApexApp(liveVm, measureVm)
+                val scannerVm: ScannerViewModel = viewModel(factory = scannerFactory)
+                ApexApp(liveVm, measureVm, scannerVm, vehicleRepo)
             }
         }
     }

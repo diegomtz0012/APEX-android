@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Home
@@ -23,8 +24,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.sp
+import com.apex.app.data.vehicle.VehicleProfileRepository
 import com.apex.app.ui.screens.CarroScreen
 import com.apex.app.ui.screens.EnVivoScreen
+import com.apex.app.ui.screens.EscanerScreen
 import com.apex.app.ui.screens.HistorialScreen
 import com.apex.app.ui.screens.InicioScreen
 import com.apex.app.ui.screens.MedirScreen
@@ -33,7 +36,12 @@ import com.apex.app.ui.theme.ApexColors
 private data class NavItem(val label: String, val icon: ImageVector)
 
 @Composable
-fun ApexApp(viewModel: LiveViewModel, measureViewModel: MeasureViewModel) {
+fun ApexApp(
+    viewModel: LiveViewModel,
+    measureViewModel: MeasureViewModel,
+    scannerViewModel: ScannerViewModel,
+    vehicleRepository: VehicleProfileRepository
+) {
     var tab by rememberSaveable { mutableStateOf(0) }
 
     val items = listOf(
@@ -41,6 +49,7 @@ fun ApexApp(viewModel: LiveViewModel, measureViewModel: MeasureViewModel) {
         NavItem("En vivo", Icons.Rounded.Speed),
         NavItem("Medir", Icons.Rounded.Timer),
         NavItem("Historial", Icons.Rounded.History),
+        NavItem("Escáner", Icons.Rounded.Build),
         NavItem("Carro", Icons.Rounded.DirectionsCar)
     )
 
@@ -76,7 +85,8 @@ fun ApexApp(viewModel: LiveViewModel, measureViewModel: MeasureViewModel) {
                 1 -> EnVivoScreen(viewModel)
                 2 -> MedirScreen(measureViewModel)
                 3 -> HistorialScreen(measureViewModel)
-                else -> CarroScreen()
+                4 -> EscanerScreen(scannerViewModel)
+                else -> CarroScreen(vehicleRepository)
             }
         }
     }

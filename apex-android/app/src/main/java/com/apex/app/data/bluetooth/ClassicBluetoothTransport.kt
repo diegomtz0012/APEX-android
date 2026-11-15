@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.InputStream
@@ -42,6 +44,10 @@ class ClassicBluetoothTransport(
         MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     override val connectionState: StateFlow<ConnectionState> =
         _connectionState.asStateFlow()
+
+    // Serializa los comandos: solo un ida-y-vuelta a la vez por el socket,
+    // así la lectura en vivo y el escáner no se pisan.
+    private val sendMutex = Mutex()
 
     @SuppressLint("MissingPermission")
     override fun pairedDevices(): Result<List<BluetoothDeviceInfo>> {
@@ -121,19 +127,21 @@ class ClassicBluetoothTransport(
 
     override suspend fun send(command: String): Result<String> =
         withContext(Dispatchers.IO) {
-            val out = output
-            val inp = input
-            if (out == null || inp == null) {
-                return@withContext Result.Failure(AppError.ConnectionLost)
+            sendMutex.withLock {
+                val out = output
+                val inp = input
+                if (out == null || inp == null) {
+                    return@withLock Result.Failure(AppError.ConnectionLost)
+                }
+                try {
+                    out.write((command + CARRIAGE_RETURN).toByteArray(Charsets.US_ASCII))
+                    out.flush()
+                } catch (e: Exception) {
+                    markConnectionLost()
+                    return@withLock Result.Failure(AppError.ConnectionLost)
+                }
+                readUntilPrompt(inp)
             }
-            try {
-                out.write((command + CARRIAGE_RETURN).toByteArray(Charsets.US_ASCII))
-                out.flush()
-            } catch (e: Exception) {
-                markConnectionLost()
-                return@withContext Result.Failure(AppError.ConnectionLost)
-            }
-            readUntilPrompt(inp)
         }
 
     private suspend fun readUntilPrompt(inp: InputStream): Result<String> {
