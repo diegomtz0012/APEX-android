@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,14 +15,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Bolt
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -41,11 +37,17 @@ import com.apex.app.ui.components.ApexCard
 import com.apex.app.ui.components.SectionLabel
 import com.apex.app.ui.theme.ApexColors
 import com.apex.app.ui.theme.ApexDisplay
+import com.apex.app.ui.theme.ApexMono
 
 @Composable
 fun MedirScreen(viewModel: MeasureViewModel) {
     val state by viewModel.ui.collectAsState()
-    val idle = state.phase == MeasurePhase.IDLE || state.phase == MeasurePhase.FINISHED
+
+    // Modo automático: se arma solo al entrar y se apaga al salir.
+    DisposableEffect(Unit) {
+        viewModel.armAuto()
+        onDispose { viewModel.stopAuto() }
+    }
 
     Column(
         modifier = Modifier
@@ -68,17 +70,16 @@ fun MedirScreen(viewModel: MeasureViewModel) {
                 TestChip(
                     label = t.label,
                     selected = state.test == t,
-                    enabled = idle,
                     onClick = { viewModel.selectTest(t) }
                 )
-                Spacer(Modifier.height(0.dp))
             }
         }
 
         Spacer(Modifier.height(20.dp))
 
         // Cronómetro grande
-        val bigTime = if (state.phase == MeasurePhase.FINISHED) state.resultMs else state.elapsedMs
+        val running = state.phase == MeasurePhase.RUNNING
+        val bigTime = if (running) state.elapsedMs else state.resultMs
         Text(
             text = formatSeconds(bigTime),
             color = ApexColors.Orange,
@@ -86,7 +87,7 @@ fun MedirScreen(viewModel: MeasureViewModel) {
             fontWeight = FontWeight.Black,
             fontFamily = ApexDisplay
         )
-        Text(text = "SEGUNDOS", color = ApexColors.Faint, fontSize = 11.sp, fontFamily = com.apex.app.ui.theme.ApexMono, letterSpacing = 2.sp)
+        Text(text = "SEGUNDOS", color = ApexColors.Faint, fontSize = 11.sp, fontFamily = ApexMono, letterSpacing = 2.sp)
 
         Spacer(Modifier.height(8.dp))
         Text(
@@ -96,8 +97,7 @@ fun MedirScreen(viewModel: MeasureViewModel) {
             fontWeight = FontWeight.Bold
         )
 
-        // Distancia (solo ¼ de milla)
-        if (state.test.isDistance && state.phase == MeasurePhase.RUNNING) {
+        if (state.test.isDistance && running) {
             Spacer(Modifier.height(4.dp))
             Text(
                 text = "${state.distanceM.toInt()} m / ${state.test.distanceM.toInt()} m",
@@ -108,24 +108,28 @@ fun MedirScreen(viewModel: MeasureViewModel) {
 
         Spacer(Modifier.height(20.dp))
 
-        // Resultado
+        // Resultado (en COLUMNA, para que no se encime)
         ApexCard(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                Split(state.test.label, formatSeconds(state.resultMs))
-                Split("Máx", "${state.topSpeedKmh}")
-            }
-            if (state.note != null) {
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    text = state.note ?: "",
-                    color = ApexColors.Muted,
-                    fontSize = 13.sp,
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
-                )
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    Split(state.test.label, formatSeconds(state.resultMs))
+                    Split("Máx", "${state.topSpeedKmh}")
+                }
+                val note = state.note
+                if (note != null) {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = note,
+                        color = ApexColors.Muted,
+                        fontSize = 13.sp,
+                        fontFamily = ApexMono,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         }
 
@@ -133,46 +137,29 @@ fun MedirScreen(viewModel: MeasureViewModel) {
         val statusMsg = state.message ?: phaseText(state.phase)
         Text(
             text = statusMsg,
-            color = if (state.message != null) ApexColors.Orange else ApexColors.Muted,
+            color = if (running) ApexColors.Orange else ApexColors.Muted,
             fontSize = 13.sp,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(Modifier.height(16.dp))
-
-        when (state.phase) {
-            MeasurePhase.IDLE, MeasurePhase.FINISHED -> {
-                Button(
-                    onClick = { viewModel.arm() },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = ApexColors.Orange,
-                        contentColor = ApexColors.OnOrange
-                    )
-                ) {
-                    Icon(Icons.Rounded.Bolt, contentDescription = null)
-                    Text(
-                        text = if (state.phase == MeasurePhase.FINISHED) "  Medir de nuevo" else "  Armar medición",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
-                }
-            }
-            MeasurePhase.ARMED, MeasurePhase.RUNNING -> {
-                OutlinedButton(
-                    onClick = { viewModel.reset() },
-                    modifier = Modifier.fillMaxWidth().height(56.dp)
-                ) {
-                    Text("Cancelar", color = ApexColors.Orange, fontSize = 16.sp)
-                }
-            }
+        OutlinedButton(
+            onClick = { viewModel.reset() },
+            modifier = Modifier.fillMaxWidth().height(50.dp)
+        ) {
+            Text(
+                text = if (running) "Cancelar" else "Reiniciar",
+                color = ApexColors.Orange,
+                fontSize = 15.sp
+            )
         }
 
         Spacer(Modifier.height(14.dp))
         Text(
-            text = "Hazlo en un lugar seguro y legal. La precisión depende del GPS de tu teléfono.",
-            color = ApexColors.Muted,
+            text = "Automático: elige la prueba y arranca a fondo desde parado — mide y guarda solo. " +
+                "Hazlo en un lugar seguro y legal.",
+            color = ApexColors.Faint,
             fontSize = 11.sp,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
@@ -181,7 +168,7 @@ fun MedirScreen(viewModel: MeasureViewModel) {
 }
 
 @Composable
-private fun TestChip(label: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
+private fun TestChip(label: String, selected: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .padding(end = 8.dp)
@@ -192,12 +179,12 @@ private fun TestChip(label: String, selected: Boolean, enabled: Boolean, onClick
                 color = if (selected) ApexColors.Orange else ApexColors.Border,
                 shape = RoundedCornerShape(50)
             )
-            .clickable(enabled = enabled) { onClick() }
+            .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 9.dp)
     ) {
         Text(
             text = label,
-            color = if (selected) ApexColors.OnOrange else if (enabled) ApexColors.Text else ApexColors.Muted,
+            color = if (selected) ApexColors.OnOrange else ApexColors.Text,
             fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold
         )
@@ -207,15 +194,15 @@ private fun TestChip(label: String, selected: Boolean, enabled: Boolean, onClick
 @Composable
 private fun Split(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = value, color = ApexColors.Orange, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(text = value, color = ApexColors.Orange, fontSize = 22.sp, fontWeight = FontWeight.Black, fontFamily = ApexDisplay)
         Spacer(Modifier.height(2.dp))
-        Text(text = label, color = ApexColors.Muted, fontSize = 11.sp)
+        Text(text = label, color = ApexColors.Faint, fontSize = 10.sp, fontFamily = ApexMono)
     }
 }
 
 private fun phaseText(phase: MeasurePhase): String = when (phase) {
-    MeasurePhase.IDLE -> "Elige la prueba, toca “Armar” y prepárate."
-    MeasurePhase.ARMED -> "Esperando el arranque…"
+    MeasurePhase.IDLE -> "Preparando GPS…"
+    MeasurePhase.ARMED -> "Listo. Acelera a fondo desde parado."
     MeasurePhase.RUNNING -> "¡Midiendo!"
     MeasurePhase.FINISHED -> "¡Listo! Guardado en el historial."
 }

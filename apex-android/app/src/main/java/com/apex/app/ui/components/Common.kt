@@ -81,13 +81,13 @@ fun StatusDot(text: String, color: Color, modifier: Modifier = Modifier) {
     }
 }
 
-/** Tarjeta base: superficie + borde sutil + esquinas 18. */
+/** Tarjeta base: superficie + borde sutil + esquinas 18. Apila en columna. */
 @Composable
 fun ApexCard(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
-    Box(
+    Column(
         modifier = modifier
             .clip(RoundedCornerShape(18.dp))
             .background(ApexColors.Surface)

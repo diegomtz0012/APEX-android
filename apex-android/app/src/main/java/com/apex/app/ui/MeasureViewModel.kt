@@ -74,12 +74,20 @@ class MeasureViewModel(
     }
 
     fun selectTest(test: TestType) {
-        if (_ui.value.phase == MeasurePhase.IDLE || _ui.value.phase == MeasurePhase.FINISHED) {
+        if (_ui.value.phase == MeasurePhase.RUNNING) return // no cambiar a media corrida
+        resetInternal()
+        if (autoMode) {
+            _ui.value = MeasureUiState(phase = MeasurePhase.ARMED, test = test, message = armHint(test))
+            startCollecting()
+        } else {
             _ui.value = MeasureUiState(test = test)
         }
     }
 
-    fun arm() {
+    private var autoMode = false
+
+    /** Modo automático: queda escuchando y mide SOLO al arrancar (sin tocar nada). */
+    fun armAuto() {
         if (!speedProvider.hasLocationPermission()) {
             _ui.value = _ui.value.copy(message = "Falta el permiso de ubicación (GPS).")
             return
@@ -88,20 +96,37 @@ class MeasureViewModel(
             _ui.value = _ui.value.copy(message = "Activa el GPS (ubicación) del teléfono.")
             return
         }
+        // Si ya está escuchando o corriendo, no reinicies.
+        if (autoMode && (_ui.value.phase == MeasurePhase.ARMED || _ui.value.phase == MeasurePhase.RUNNING)) return
+        autoMode = true
         val test = _ui.value.test
         resetInternal()
-        val hint = if (test.fromStandstill) "Acelera a fondo desde parado."
-        else "Alcanza ${test.startKmh.toInt()} km/h y acelera a fondo."
-        _ui.value = MeasureUiState(phase = MeasurePhase.ARMED, test = test, message = hint)
+        _ui.value = MeasureUiState(phase = MeasurePhase.ARMED, test = test, message = armHint(test))
         startCollecting()
     }
+
+    /** Se llama al salir de la pantalla: apaga el GPS para no gastar batería. */
+    fun stopAuto() {
+        autoMode = false
+        collectJob?.cancel()
+        tickJob?.cancel()
+    }
+
+    private fun armHint(test: TestType): String =
+        if (test.fromStandstill) "Listo. Acelera a fondo desde parado."
+        else "Listo. Pasa de ${test.startKmh.toInt()} km/h acelerando a fondo."
 
     fun reset() {
         collectJob?.cancel()
         tickJob?.cancel()
         val test = _ui.value.test
         resetInternal()
-        _ui.value = MeasureUiState(test = test)
+        if (autoMode) {
+            _ui.value = MeasureUiState(phase = MeasurePhase.ARMED, test = test, message = armHint(test))
+            startCollecting()
+        } else {
+            _ui.value = MeasureUiState(test = test)
+        }
     }
 
     private fun resetInternal() {
@@ -131,7 +156,15 @@ class MeasureViewModel(
                 if (p != null && p.kmh < test.startKmh && sample.kmh >= test.startKmh) {
                     startNanos = interpolateTime(p, sample, test.startKmh)
                     distanceM = 0.0
-                    _ui.value = _ui.value.copy(phase = MeasurePhase.RUNNING, message = null)
+                    secondaryMs = null
+                    _ui.value = _ui.value.copy(
+                        phase = MeasurePhase.RUNNING,
+                        elapsedMs = 0L,
+                        resultMs = null,
+                        note = null,
+                        topSpeedKmh = speedInt,
+                        message = null
+                    )
                     startTicker()
                 }
             }
@@ -185,7 +218,6 @@ class MeasureViewModel(
     }
 
     private fun finish(top: Int, timeMs: Long, note: String?) {
-        collectJob?.cancel()
         tickJob?.cancel()
         val result = DragResult(
             id = System.currentTimeMillis(),
@@ -196,13 +228,30 @@ class MeasureViewModel(
             note = note
         )
         _history.value = history.add(result)
-        _ui.value = _ui.value.copy(
-            phase = MeasurePhase.FINISHED,
-            elapsedMs = timeMs,
-            resultMs = timeMs,
-            note = note,
-            topSpeedKmh = top
-        )
+        if (autoMode) {
+            // Guarda y queda LISTO para la próxima corrida, sin tocar nada.
+            prev = null
+            startNanos = 0L
+            distanceM = 0.0
+            secondaryMs = null
+            _ui.value = _ui.value.copy(
+                phase = MeasurePhase.ARMED,
+                elapsedMs = timeMs,
+                resultMs = timeMs,
+                note = note,
+                topSpeedKmh = top,
+                message = "¡Listo! Guardado. Para otra, frena y vuelve a arrancar."
+            )
+        } else {
+            collectJob?.cancel()
+            _ui.value = _ui.value.copy(
+                phase = MeasurePhase.FINISHED,
+                elapsedMs = timeMs,
+                resultMs = timeMs,
+                note = note,
+                topSpeedKmh = top
+            )
+        }
     }
 
     fun clearHistory() {
