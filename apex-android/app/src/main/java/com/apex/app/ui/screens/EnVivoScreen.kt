@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.BorderStroke
 import com.apex.app.data.bluetooth.ConnectionState
 import com.apex.app.ui.components.ApexCard
-import com.apex.app.ui.components.CircularGauge
+import com.apex.app.ui.components.GaugeCard
 import com.apex.app.ui.components.SectionLabel
 import com.apex.app.ui.components.StatusDot
 import com.apex.app.ui.theme.ApexColors
@@ -60,22 +60,14 @@ fun EnVivoScreen(viewModel: LiveViewModel) {
         Spacer(Modifier.height(18.dp))
 
         if (connected) {
-            // Medidores grandes
-            ApexCard(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    CircularGauge(value = state.rpm, max = 7000, label = "RPM", unit = "rpm", size = 104.dp)
-                    CircularGauge(value = state.speed, max = 220, label = "Velocidad", unit = "km/h", size = 104.dp)
-                }
-                Spacer(Modifier.height(18.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    CircularGauge(value = state.coolant, max = 120, label = "Refrigerante", unit = "°C", size = 104.dp)
-                }
+            // Medidores (cada uno en su tarjeta, sin encimarse)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                GaugeCard(state.rpm, 7000, "RPM", "rpm", ApexColors.Orange, Modifier.weight(1f))
+                GaugeCard(state.coolant, 120, "TEMP", "°C", ApexColors.Orange, Modifier.weight(1f))
+                GaugeCard(state.speed, 220, "VEL", "km/h", ApexColors.Orange, Modifier.weight(1f))
             }
 
             Spacer(Modifier.height(12.dp))

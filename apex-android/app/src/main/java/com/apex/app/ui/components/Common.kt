@@ -1,6 +1,7 @@
 package com.apex.app.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,21 +29,44 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.apex.app.ui.theme.ApexColors
+import com.apex.app.ui.theme.ApexDisplay
+import com.apex.app.ui.theme.ApexMono
 
-/** Título de sección en mayúsculas, estilo monoespaciado técnico. */
+/** Eyebrow / título de sección en mono, estilo técnico. */
 @Composable
 fun SectionLabel(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text.uppercase(),
-        color = ApexColors.Muted,
+        color = ApexColors.Faint,
         fontSize = 11.sp,
-        fontWeight = FontWeight.SemiBold,
-        letterSpacing = 1.5.sp,
+        fontFamily = ApexMono,
+        letterSpacing = 1.2.sp,
         modifier = modifier
     )
 }
 
-/** Punto + texto de estado (verde = conectado, gris = desconectado, etc.). */
+/** Etiqueta dentro de una tarjeta, con punto luminoso de acento (estilo "ctag"). */
+@Composable
+fun CardTag(text: String, accent: Color = ApexColors.Orange, modifier: Modifier = Modifier) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
+        Box(
+            modifier = Modifier
+                .size(5.dp)
+                .clip(CircleShape)
+                .background(accent)
+        )
+        Spacer(Modifier.width(7.dp))
+        Text(
+            text = text.uppercase(),
+            color = ApexColors.Faint,
+            fontSize = 10.sp,
+            fontFamily = ApexMono,
+            letterSpacing = 1.sp
+        )
+    }
+}
+
+/** Punto + texto de estado. */
 @Composable
 fun StatusDot(text: String, color: Color, modifier: Modifier = Modifier) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
@@ -53,11 +77,11 @@ fun StatusDot(text: String, color: Color, modifier: Modifier = Modifier) {
                 .background(color)
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Text(text = text, color = ApexColors.Text, fontSize = 13.sp)
+        Text(text = text, color = ApexColors.Text, fontSize = 13.sp, fontFamily = ApexMono)
     }
 }
 
-/** Tarjeta base con fondo de superficie y borde sutil. */
+/** Tarjeta base: superficie + borde sutil + esquinas 18. */
 @Composable
 fun ApexCard(
     modifier: Modifier = Modifier,
@@ -67,13 +91,14 @@ fun ApexCard(
         modifier = modifier
             .clip(RoundedCornerShape(18.dp))
             .background(ApexColors.Surface)
+            .border(1.dp, ApexColors.LineSoft, RoundedCornerShape(18.dp))
             .padding(16.dp)
     ) {
         content()
     }
 }
 
-/** Pantalla de módulo aún no construido: ícono + "Próximamente". */
+/** Pantalla de módulo aún no construido. */
 @Composable
 fun ComingSoonScreen(icon: ImageVector, title: String, description: String) {
     Column(
@@ -87,7 +112,7 @@ fun ComingSoonScreen(icon: ImageVector, title: String, description: String) {
             modifier = Modifier
                 .size(84.dp)
                 .clip(RoundedCornerShape(22.dp))
-                .background(ApexColors.SurfaceHi),
+                .background(ApexColors.Surface2),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -98,12 +123,7 @@ fun ComingSoonScreen(icon: ImageVector, title: String, description: String) {
             )
         }
         Spacer(modifier = Modifier.height(20.dp))
-        Text(
-            text = title,
-            color = ApexColors.Text,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
+        Text(text = title, color = ApexColors.Text, fontSize = 20.sp, fontFamily = ApexDisplay, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = description,
@@ -116,17 +136,17 @@ fun ComingSoonScreen(icon: ImageVector, title: String, description: String) {
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .clip(RoundedCornerShape(50))
-                .background(ApexColors.SurfaceHi)
+                .background(ApexColors.Surface2)
                 .padding(horizontal = 14.dp, vertical = 8.dp)
         ) {
             Icon(
                 imageVector = Icons.Rounded.Lock,
                 contentDescription = null,
-                tint = ApexColors.Muted,
+                tint = ApexColors.Faint,
                 modifier = Modifier.size(14.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
-            Text(text = "Próximamente", color = ApexColors.Muted, fontSize = 12.sp)
+            Text(text = "Próximamente", color = ApexColors.Faint, fontSize = 12.sp, fontFamily = ApexMono)
         }
     }
 }

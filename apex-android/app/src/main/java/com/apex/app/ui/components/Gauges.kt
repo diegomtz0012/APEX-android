@@ -1,59 +1,71 @@
 package com.apex.app.ui.components
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.apex.app.ui.theme.ApexColors
+import com.apex.app.ui.theme.ApexDisplay
+import com.apex.app.ui.theme.ApexMono
 
 /**
- * Medidor circular estilo tablero: un arco que se llena según el valor,
- * con el número grande en el centro. Si el valor es null, muestra "—".
+ * Medidor en tarjeta propia (estilo maqueta): arco + número grande (Oxanium)
+ * + unidad + etiqueta. Pensado para ir en una fila con weight(1f) cada uno,
+ * así no se enciman.
  */
 @Composable
-fun CircularGauge(
+fun GaugeCard(
     value: Int?,
     max: Int,
     label: String,
     unit: String,
-    modifier: Modifier = Modifier,
-    size: androidx.compose.ui.unit.Dp = 118.dp
+    accent: Color = ApexColors.Orange,
+    modifier: Modifier = Modifier
 ) {
     val target = ((value ?: 0).toFloat() / max).coerceIn(0f, 1f)
     val fraction by animateFloatAsState(
         targetValue = target,
-        animationSpec = tween(durationMillis = 300),
+        animationSpec = tween(durationMillis = 350),
         label = "gauge"
     )
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(size)) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(ApexColors.Surface2)
+            .padding(vertical = 12.dp, horizontal = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(84.dp)) {
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val stroke = 11.dp.toPx()
+                val stroke = 9.dp.toPx()
                 val startAngle = 135f
                 val sweepMax = 270f
                 val arcSize = Size(this.size.width - stroke, this.size.height - stroke)
                 val topLeft = Offset(stroke / 2f, stroke / 2f)
-
-                // Pista de fondo
                 drawArc(
-                    color = ApexColors.Border,
+                    color = ApexColors.LineSoft,
                     startAngle = startAngle,
                     sweepAngle = sweepMax,
                     useCenter = false,
@@ -61,9 +73,8 @@ fun CircularGauge(
                     size = arcSize,
                     style = Stroke(width = stroke, cap = StrokeCap.Round)
                 )
-                // Valor
                 drawArc(
-                    color = ApexColors.Orange,
+                    color = accent,
                     startAngle = startAngle,
                     sweepAngle = sweepMax * fraction,
                     useCenter = false,
@@ -73,25 +84,40 @@ fun CircularGauge(
                 )
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                androidx.compose.material3.Text(
+                Text(
                     text = value?.toString() ?: "—",
-                    color = ApexColors.Orange,
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold
+                    color = accent,
+                    fontSize = 22.sp,
+                    fontFamily = ApexDisplay,
+                    fontWeight = FontWeight.Black
                 )
-                androidx.compose.material3.Text(
+                Text(
                     text = unit,
                     color = ApexColors.Muted,
-                    fontSize = 11.sp
+                    fontSize = 9.sp,
+                    fontFamily = ApexMono
                 )
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
-        androidx.compose.material3.Text(
+        Text(
             text = label,
-            color = ApexColors.Text,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium
+            color = ApexColors.Faint,
+            fontSize = 9.sp,
+            fontFamily = ApexMono
         )
     }
+}
+
+// Alias de compatibilidad por si alguna pantalla aún llama CircularGauge.
+@Composable
+fun CircularGauge(
+    value: Int?,
+    max: Int,
+    label: String,
+    unit: String,
+    modifier: Modifier = Modifier,
+    size: androidx.compose.ui.unit.Dp = 104.dp
+) {
+    GaugeCard(value = value, max = max, label = label, unit = unit, modifier = modifier)
 }
