@@ -16,6 +16,7 @@ import androidx.core.content.ContextCompat
 import com.apex.app.data.bluetooth.ConnectionState
 import com.apex.app.data.location.GpsPoint
 import com.apex.app.data.obd.ObdCommand
+import com.apex.app.data.obd.commands.FuelRateCommand
 import com.apex.app.data.obd.commands.IntakeTempCommand
 import com.apex.app.data.obd.commands.MafCommand
 import com.apex.app.data.obd.commands.MapCommand
@@ -190,16 +191,45 @@ class TripService : Service() {
 
     private suspend fun pollFuel() {
         if (ServiceGraph.transport.connectionState.value !is ConnectionState.Connected) return
-        val mafGps = readMafGps() ?: return
         val now = System.nanoTime()
-        if (lastMafNanos != 0L) {
-            val dt = (now - lastMafNanos) / 1_000_000_000.0
-            fuelLiters += mafGps * dt / afr / density
-            hasFuel = true
-            val kmPerL = if (fuelLiters > 0.0) distanceKm / fuelLiters else null
-            _state.value = _state.value.copy(fuelLiters = fuelLiters, kmPerL = kmPerL)
+
+        // 1) Caudal directo (PID 5E) en L/h — lo más preciso (gasolina y diésel).
+        val rateLh = readFloat(FuelRateCommand())
+        if (rateLh != null && rateLh > 0f) {
+            if (lastMafNanos != 0L) {
+                val dtHours = (now - lastMafNanos) / 3_600_000_000_000.0 // ns → horas
+                fuelLiters += rateLh * dtHours
+                commitFuel()
+            }
+            lastMafNanos = now
+            return
         }
-        lastMafNanos = now
+
+        // 2) Por aire (MAF o densidad-velocidad) ÷ mezcla — mejor para gasolina.
+        val mafGps = readMafGps()
+        if (mafGps != null) {
+            if (lastMafNanos != 0L) {
+                val dt = (now - lastMafNanos) / 1_000_000_000.0
+                fuelLiters += mafGps * dt / afr / density
+                commitFuel()
+            }
+            lastMafNanos = now
+        }
+    }
+
+    private fun commitFuel() {
+        hasFuel = true
+        val kmPerL = if (fuelLiters > 0.0) distanceKm / fuelLiters else null
+        _state.value = _state.value.copy(fuelLiters = fuelLiters, kmPerL = kmPerL)
+    }
+
+    private suspend fun readFloat(cmd: ObdCommand<Float>): Float? {
+        val r = ServiceGraph.transport.send(cmd.command)
+        if (r is Result.Success) {
+            val p = cmd.parse(r.data)
+            if (p is Result.Success) return p.data
+        }
+        return null
     }
 
     /** Flujo de aire en g/s: directo (MAF) o estimado por densidad-velocidad. */

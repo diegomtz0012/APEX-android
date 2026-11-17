@@ -81,3 +81,13 @@ class VoltageCommand : ObdCommand<Float>(
 ) {
     override fun decode(bytes: List<Int>): Float = (bytes[0] * 256 + bytes[1]) / 1000f
 }
+
+/**
+ * PID 5E — Caudal de combustible del motor.  (A*256 + B) / 20  (litros/hora)
+ * El método MÁS preciso para el consumo (gasolina y diésel), si el carro lo da.
+ */
+class FuelRateCommand : ObdCommand<Float>(
+    mode = Constants.ObdMode.LIVE_DATA, pid = "5E", name = "Caudal", unit = "L/h"
+) {
+    override fun decode(bytes: List<Int>): Float = (bytes[0] * 256 + bytes[1]) / 20f
+}

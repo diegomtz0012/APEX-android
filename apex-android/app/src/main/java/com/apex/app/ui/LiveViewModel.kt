@@ -122,6 +122,10 @@ class LiveViewModel(
     private suspend fun scanVehicle() {
         appendLog("Barrido del vehículo…")
 
+        // Primar el protocolo: la primera petición dispara la búsqueda del ELM327
+        // (puede tardar). Esto la fija ANTES de leer el VIN, que si no se perdía.
+        repeat(2) { transport.send("0100") }
+
         // VIN (modo 09 PID 02) — con diagnóstico de lo que respondió el carro.
         val vinResp = transport.send("0902")
         val vinRaw = if (vinResp is Result.Success) vinResp.data else "(sin respuesta)"
