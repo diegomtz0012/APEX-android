@@ -16,6 +16,23 @@ object ShareUtils {
         context.startActivity(Intent.createChooser(intent, "Compartir"))
     }
 
+    /** Comparte un archivo ya escrito (ej. el Excel de viajes). */
+    fun shareFile(context: Context, file: File, mime: String) {
+        try {
+            val uri = FileProvider.getUriForFile(
+                context, "${context.packageName}.fileprovider", file
+            )
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = mime
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(intent, "Exportar"))
+        } catch (e: Exception) {
+            // No tumbar la app si el chooser falla.
+        }
+    }
+
     fun shareCsv(context: Context, fileName: String, content: String) {
         try {
             val dir = File(context.cacheDir, "exports").apply { mkdirs() }

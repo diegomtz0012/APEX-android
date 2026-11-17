@@ -28,6 +28,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.apex.app.data.export.TripExporter
 import com.apex.app.data.trip.Anomaly
 import com.apex.app.data.trip.LatLng
 import com.apex.app.data.trip.RouteFlag
@@ -53,6 +55,7 @@ import com.apex.app.ui.share.ShareUtils
 import com.apex.app.ui.theme.ApexColors
 import com.apex.app.ui.theme.ApexDisplay
 import com.apex.app.ui.theme.ApexMono
+import kotlinx.coroutines.launch
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -70,8 +73,10 @@ fun ViajesScreen(viewModel: TripViewModel) {
     val trips by viewModel.trips.collectAsState()
     val context = LocalContext.current
     val price = remember { viewModel.fuelPricePerGallon() }
+    val exportScope = rememberCoroutineScope()
     var selected by remember { mutableStateOf<Trip?>(null) }
     var choosing by remember { mutableStateOf(false) }
+    var exporting by remember { mutableStateOf(false) }
 
     // Viaje a mostrar en detalle/mapa: el recién terminado o el seleccionado.
     val finishedTrip = if (state.finished) trips.find { it.id == state.finishedTripId } else null
@@ -165,7 +170,41 @@ fun ViajesScreen(viewModel: TripViewModel) {
             // --- Viajes guardados ---
             if (!state.recording) {
                 item {
-                    SectionLabel("Viajes guardados")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        SectionLabel("Viajes guardados")
+                        if (trips.isNotEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(50))
+                                    .background(ApexColors.Surface2)
+                                    .border(1.dp, ApexColors.Border, RoundedCornerShape(50))
+                                    .clickable(enabled = !exporting) {
+                                        exporting = true
+                                        exportScope.launch {
+                                            try {
+                                                val file = TripExporter.export(context, trips, price)
+                                                ShareUtils.shareFile(
+                                                    context, file,
+                                                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                                )
+                                            } finally {
+                                                exporting = false
+                                            }
+                                        }
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    if (exporting) "Generando…" else "⬇ Excel",
+                                    color = ApexColors.Green, fontSize = 11.sp, fontFamily = ApexMono
+                                )
+                            }
+                        }
+                    }
                     Spacer(Modifier.height(8.dp))
                 }
                 items(trips) { trip ->
