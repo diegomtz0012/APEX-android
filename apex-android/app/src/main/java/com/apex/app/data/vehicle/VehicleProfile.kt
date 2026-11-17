@@ -8,5 +8,6 @@ data class VehicleProfile(
     val year: String = "",
     val weightKg: String = "",
     val diesel: Boolean = false,
-    val vin: String = ""
+    val vin: String = "",
+    val displacementL: String = ""   // cilindrada en litros (para el consumo sin MAF)
 )

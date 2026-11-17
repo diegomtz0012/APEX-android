@@ -49,6 +49,7 @@ fun CarroScreen(repository: VehicleProfileRepository) {
     var model by rememberSaveable { mutableStateOf(initial.model) }
     var year by rememberSaveable { mutableStateOf(initial.year) }
     var weight by rememberSaveable { mutableStateOf(initial.weightKg) }
+    var displacement by rememberSaveable { mutableStateOf(initial.displacementL) }
     var diesel by rememberSaveable { mutableStateOf(initial.diesel) }
     var saved by remember { mutableStateOf(false) }
 
@@ -82,6 +83,7 @@ fun CarroScreen(repository: VehicleProfileRepository) {
         Field("Modelo (ej. Accent)", model) { model = it; saved = false }
         Field("Año", year, numeric = true) { year = it; saved = false }
         Field("Peso (kg)", weight, numeric = true) { weight = it; saved = false }
+        Field("Cilindrada en litros (ej. 1.4)", displacement) { displacement = it; saved = false }
 
         Spacer(Modifier.height(6.dp))
         Text("Combustible", color = ApexColors.Muted, fontSize = 12.sp)
@@ -100,7 +102,10 @@ fun CarroScreen(repository: VehicleProfileRepository) {
         Button(
             onClick = {
                 repository.save(
-                    VehicleProfile(nickname, make, model, year, weight, diesel)
+                    initial.copy(
+                        nickname = nickname, make = make, model = model, year = year,
+                        weightKg = weight, diesel = diesel, displacementL = displacement
+                    )
                 )
                 saved = true
             },

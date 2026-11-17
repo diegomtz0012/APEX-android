@@ -121,27 +121,33 @@ class LiveViewModel(
     /** Barrido inicial: lee VIN y combustible, decodifica y crea el perfil solo. */
     private suspend fun scanVehicle() {
         appendLog("Barrido del vehículo…")
-        var vin: String? = null
-        val vinResp = transport.send("0902")
-        if (vinResp is Result.Success) vin = VinDecoder.parseVin(vinResp.data)
 
-        var diesel: Boolean? = null
+        // VIN (modo 09 PID 02) — con diagnóstico de lo que respondió el carro.
+        val vinResp = transport.send("0902")
+        val vinRaw = if (vinResp is Result.Success) vinResp.data else "(sin respuesta)"
+        appendLog("VIN resp: ${vinRaw.replace("\r", " ").replace("\n", " ").trim().take(60)}")
+        val vin = if (vinResp is Result.Success) VinDecoder.parseVin(vinResp.data) else null
+
+        // Combustible (modo 01 PID 51)
         val fuelResp = transport.send("0151")
-        if (fuelResp is Result.Success) diesel = VinDecoder.parseFuelType(fuelResp.data)
+        val fuelRaw = if (fuelResp is Result.Success) fuelResp.data else "(sin respuesta)"
+        appendLog("Combustible resp: ${fuelRaw.replace("\r", " ").replace("\n", " ").trim().take(40)}")
+        val diesel = if (fuelResp is Result.Success) VinDecoder.parseFuelType(fuelResp.data) else null
 
         if (vin == null && diesel == null) {
-            appendLog("El carro no entregó VIN ni tipo de combustible.")
+            appendLog("Tu carro no entregó VIN ni combustible por OBD. Ponlo a mano en 'Carro'.")
             return
         }
 
         var make: String? = null
         var model: String? = null
         var year: String? = null
+        var disp: String? = null
         if (vin != null) {
             appendLog("VIN: $vin")
             val online = withContext(Dispatchers.IO) { VinDecoder.decodeOnline(vin) }
             if (online != null) {
-                make = online.first; model = online.second; year = online.third
+                make = online.make; model = online.model; year = online.year; disp = online.displacementL
             }
             if (make == null) make = VinDecoder.makeFromVin(vin)
             if (year == null) year = VinDecoder.yearFromVin(vin)
@@ -160,6 +166,7 @@ class LiveViewModel(
             model = current.model.ifBlank { model ?: "" },
             year = current.year.ifBlank { year ?: "" },
             vin = current.vin.ifBlank { vin ?: "" },
+            displacementL = current.displacementL.ifBlank { disp ?: "" },
             diesel = diesel ?: current.diesel,
             nickname = current.nickname.ifBlank { listOfNotNull(make, model).joinToString(" ") }
         )

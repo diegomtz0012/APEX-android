@@ -82,11 +82,18 @@ object VinDecoder {
         return null
     }
 
+    data class OnlineVin(
+        val make: String?,
+        val model: String?,
+        val year: String?,
+        val displacementL: String?
+    )
+
     /**
-     * Intenta decodificar el VIN con la NHTSA (internet). Devuelve (marca, modelo, año)
-     * o null si no hay red o falla. DEBE llamarse fuera del hilo principal.
+     * Intenta decodificar el VIN con la NHTSA (internet). Devuelve marca/modelo/año
+     * y cilindrada, o null si no hay red o falla. DEBE llamarse fuera del hilo principal.
      */
-    fun decodeOnline(vin: String): Triple<String?, String?, String?>? {
+    fun decodeOnline(vin: String): OnlineVin? {
         return try {
             val url = URL("https://vpic.nhtsa.dot.gov/api/vehicles/decodevinvalues/$vin?format=json")
             val conn = (url.openConnection() as HttpURLConnection).apply {
@@ -101,7 +108,8 @@ object VinDecoder {
                 ?.lowercase()?.replaceFirstChar { it.uppercase() }
             val model = results.optString("Model", "").takeIf { it.isNotBlank() }
             val year = results.optString("ModelYear", "").takeIf { it.isNotBlank() }
-            Triple(make, model, year)
+            val disp = results.optString("DisplacementL", "").takeIf { it.isNotBlank() }
+            OnlineVin(make, model, year, disp)
         } catch (e: Exception) {
             null
         }

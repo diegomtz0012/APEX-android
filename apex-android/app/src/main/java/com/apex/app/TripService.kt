@@ -15,7 +15,11 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.apex.app.data.bluetooth.ConnectionState
 import com.apex.app.data.location.GpsPoint
+import com.apex.app.data.obd.ObdCommand
+import com.apex.app.data.obd.commands.IntakeTempCommand
 import com.apex.app.data.obd.commands.MafCommand
+import com.apex.app.data.obd.commands.MapCommand
+import com.apex.app.data.obd.commands.RpmCommand
 import com.apex.app.data.trip.LatLng
 import com.apex.app.data.trip.Trip
 import com.apex.app.ui.TripUiState
@@ -99,6 +103,7 @@ class TripService : Service() {
     private var lastMafNanos = 0L
     private var afr = 14.7
     private var density = 745.0
+    private var displacementL = 0.0
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -134,6 +139,7 @@ class TripService : Service() {
 
         val profile = ServiceGraph.vehicleRepo.load()
         if (profile.diesel) { afr = 14.5; density = 832.0 } else { afr = 14.7; density = 745.0 }
+        displacementL = profile.displacementL.toDoubleOrNull() ?: 0.0
 
         routePoints.clear()
         distanceKm = 0.0; maxKmh = 0; last = null
@@ -153,7 +159,7 @@ class TripService : Service() {
         }
         mafJob = scope.launch {
             while (isActive && _state.value.recording) {
-                pollMaf()
+                pollFuel()
                 delay(1000L)
             }
         }
@@ -182,27 +188,50 @@ class TripService : Service() {
         )
     }
 
-    private suspend fun pollMaf() {
+    private suspend fun pollFuel() {
         if (ServiceGraph.transport.connectionState.value !is ConnectionState.Connected) return
-        val cmd = MafCommand()
-        when (val r = ServiceGraph.transport.send(cmd.command)) {
-            is Result.Success -> {
-                val parsed = cmd.parse(r.data)
-                if (parsed is Result.Success) {
-                    val maf = parsed.data
-                    val now = System.nanoTime()
-                    if (lastMafNanos != 0L) {
-                        val dt = (now - lastMafNanos) / 1_000_000_000.0
-                        fuelLiters += maf * dt / afr / density
-                        hasFuel = true
-                        val kmPerL = if (fuelLiters > 0.0) distanceKm / fuelLiters else null
-                        _state.value = _state.value.copy(fuelLiters = fuelLiters, kmPerL = kmPerL)
-                    }
-                    lastMafNanos = now
-                }
-            }
-            is Result.Failure -> { /* sin MAF */ }
+        val mafGps = readMafGps() ?: return
+        val now = System.nanoTime()
+        if (lastMafNanos != 0L) {
+            val dt = (now - lastMafNanos) / 1_000_000_000.0
+            fuelLiters += mafGps * dt / afr / density
+            hasFuel = true
+            val kmPerL = if (fuelLiters > 0.0) distanceKm / fuelLiters else null
+            _state.value = _state.value.copy(fuelLiters = fuelLiters, kmPerL = kmPerL)
         }
+        lastMafNanos = now
+    }
+
+    /** Flujo de aire en g/s: directo (MAF) o estimado por densidad-velocidad. */
+    private suspend fun readMafGps(): Double? {
+        // 1) MAF directo (PID 10) si el carro lo da.
+        val mafCmd = MafCommand()
+        val r = ServiceGraph.transport.send(mafCmd.command)
+        if (r is Result.Success) {
+            val p = mafCmd.parse(r.data)
+            if (p is Result.Success && p.data > 0f) return p.data.toDouble()
+        }
+        // 2) Densidad-velocidad: necesita cilindrada + MAP + IAT + RPM.
+        if (displacementL <= 0.0) return null
+        val rpm = readInt(RpmCommand()) ?: return null
+        val mapKpa = readInt(MapCommand()) ?: return null
+        val iatC = readInt(IntakeTempCommand()) ?: return null
+        if (rpm <= 0 || mapKpa <= 0) return null
+        val iatK = iatC + 273.15
+        val ve = 0.85 // eficiencia volumétrica aproximada
+        val airDensity = (mapKpa * 1000.0) / (287.0 * iatK)         // kg/m³
+        val volPerSec = (rpm / 2.0 / 60.0) * (displacementL / 1000.0) * ve // m³/s (4 tiempos)
+        val gps = airDensity * volPerSec * 1000.0                    // g/s
+        return if (gps > 0.0) gps else null
+    }
+
+    private suspend fun readInt(cmd: ObdCommand<Int>): Int? {
+        val r = ServiceGraph.transport.send(cmd.command)
+        if (r is Result.Success) {
+            val p = cmd.parse(r.data)
+            if (p is Result.Success) return p.data
+        }
+        return null
     }
 
     private fun finishRecording() {
