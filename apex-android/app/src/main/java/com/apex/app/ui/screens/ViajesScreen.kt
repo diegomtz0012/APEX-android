@@ -1,5 +1,6 @@
 package com.apex.app.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Button
@@ -27,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -35,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.apex.app.data.trip.LatLng
+import com.apex.app.data.trip.RpmBand
 import com.apex.app.data.trip.Trip
 import com.apex.app.ui.TripViewModel
 import com.apex.app.ui.components.ApexCard
@@ -42,6 +46,7 @@ import com.apex.app.ui.components.SectionLabel
 import com.apex.app.ui.share.ShareUtils
 import com.apex.app.ui.theme.ApexColors
 import com.apex.app.ui.theme.ApexDisplay
+import com.apex.app.ui.theme.ApexMono
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -136,6 +141,16 @@ fun ViajesScreen(viewModel: TripViewModel) {
             }
         }
 
+        // --- Gráfica RPM vs consumo del viaje seleccionado ---
+        if (!state.recording && sel != null && sel.rpmBands.isNotEmpty()) {
+            SectionLabel("Consumo vs RPM", modifier = Modifier.padding(horizontal = 16.dp))
+            Spacer(Modifier.height(8.dp))
+            ApexCard(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                RpmConsumoChart(sel.rpmBands)
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+
         // --- Viajes guardados ---
         if (!state.recording) {
             SectionLabel(
@@ -189,6 +204,41 @@ private fun TripMap(route: List<LatLng>) {
             map.invalidate()
         }
     )
+}
+
+@Composable
+private fun RpmConsumoChart(bands: List<RpmBand>) {
+    val maxLh = (bands.maxOfOrNull { it.lPerH } ?: 1.0).coerceAtLeast(0.1)
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().height(130.dp),
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            bands.forEach { b ->
+                val h = ((b.lPerH / maxLh) * 108.0).toInt().coerceAtLeast(4)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Bottom
+                ) {
+                    Text("%.1f".format(b.lPerH), color = ApexColors.Cyan, fontSize = 8.sp, fontFamily = ApexMono)
+                    Spacer(Modifier.height(3.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(h.dp)
+                            .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                            .background(ApexColors.Cyan)
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text("%.1fk".format(b.rpm / 1000.0), color = ApexColors.Faint, fontSize = 8.sp, fontFamily = ApexMono)
+                }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Text("Litros/hora promedio por rango de RPM", color = ApexColors.Muted, fontSize = 11.sp)
+    }
 }
 
 @Composable

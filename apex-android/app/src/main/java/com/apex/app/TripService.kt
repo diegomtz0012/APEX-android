@@ -18,10 +18,14 @@ import com.apex.app.data.location.GpsPoint
 import com.apex.app.data.obd.ObdCommand
 import com.apex.app.data.obd.commands.FuelRateCommand
 import com.apex.app.data.obd.commands.IntakeTempCommand
+import com.apex.app.data.obd.commands.LongFuelTrimCommand
 import com.apex.app.data.obd.commands.MafCommand
 import com.apex.app.data.obd.commands.MapCommand
 import com.apex.app.data.obd.commands.RpmCommand
+import com.apex.app.data.obd.commands.ShortFuelTrimCommand
+import com.apex.app.data.obd.commands.ThrottleCommand
 import com.apex.app.data.trip.LatLng
+import com.apex.app.data.trip.RpmBand
 import com.apex.app.data.trip.Trip
 import com.apex.app.ui.TripUiState
 import com.apex.app.core.Result
@@ -105,6 +109,8 @@ class TripService : Service() {
     private var afr = 14.7
     private var density = 745.0
     private var displacementL = 0.0
+    private val bandFuel = HashMap<Int, Double>() // banda RPM -> litros
+    private val bandTime = HashMap<Int, Double>() // banda RPM -> segundos
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -145,6 +151,7 @@ class TripService : Service() {
         routePoints.clear()
         distanceKm = 0.0; maxKmh = 0; last = null
         fuelLiters = 0.0; hasFuel = false; lastMafNanos = 0L
+        bandFuel.clear(); bandTime.clear()
         startMillis = System.currentTimeMillis()
         _state.value = TripUiState(recording = true, message = "Grabando viaje…")
 
@@ -192,29 +199,44 @@ class TripService : Service() {
     private suspend fun pollFuel() {
         if (ServiceGraph.transport.connectionState.value !is ConnectionState.Connected) return
         val now = System.nanoTime()
+        val rpm = readInt(RpmCommand()) ?: 0
 
-        // 1) Caudal directo (PID 5E) en L/h — lo más preciso (gasolina y diésel).
-        val rateLh = readFloat(FuelRateCommand())
-        if (rateLh != null && rateLh > 0f) {
-            if (lastMafNanos != 0L) {
-                val dtHours = (now - lastMafNanos) / 3_600_000_000_000.0 // ns → horas
-                fuelLiters += rateLh * dtHours
-                commitFuel()
+        // Caudal instantáneo (L/h): directo (015E) o estimado por aire.
+        var rateLh: Float? = readFloat(FuelRateCommand())
+        if (rateLh == null || rateLh <= 0f) {
+            val mafGps = readMafGps()
+            if (mafGps != null) {
+                var lPerS = mafGps / afr / density      // L/s (mezcla ideal)
+                lPerS *= fuelTrimFactor()               // corrección por ajustes de mezcla
+                rateLh = (lPerS * 3600.0).toFloat()
+                // Corte en desaceleración (DFCO): acelerador suelto y en marcha → 0.
+                val throttle = readInt(ThrottleCommand())
+                if (throttle != null && throttle <= 2 && rpm > 1200 && _state.value.curSpeedKmh > 0) {
+                    rateLh = 0f
+                }
             }
-            lastMafNanos = now
-            return
         }
+        if (rateLh == null) return
 
-        // 2) Por aire (MAF o densidad-velocidad) ÷ mezcla — mejor para gasolina.
-        val mafGps = readMafGps()
-        if (mafGps != null) {
-            if (lastMafNanos != 0L) {
-                val dt = (now - lastMafNanos) / 1_000_000_000.0
-                fuelLiters += mafGps * dt / afr / density
-                commitFuel()
+        if (lastMafNanos != 0L) {
+            val dtSec = (now - lastMafNanos) / 1_000_000_000.0
+            val inc = rateLh * (dtSec / 3600.0) // litros
+            fuelLiters += inc
+            if (rpm > 0) {
+                val band = (rpm / 500) * 500
+                bandFuel[band] = (bandFuel[band] ?: 0.0) + inc
+                bandTime[band] = (bandTime[band] ?: 0.0) + dtSec
             }
-            lastMafNanos = now
+            commitFuel()
         }
+        lastMafNanos = now
+    }
+
+    /** Factor de corrección por ajustes de mezcla del ECU (corto + largo plazo). */
+    private suspend fun fuelTrimFactor(): Double {
+        val st = readInt(ShortFuelTrimCommand()) ?: 0
+        val lt = readInt(LongFuelTrimCommand()) ?: 0
+        return (1.0 + (st + lt) / 100.0).coerceIn(0.5, 1.5)
     }
 
     private fun commitFuel() {
@@ -271,6 +293,11 @@ class TripService : Service() {
         val avg = if (hours > 0.0) distanceKm / hours else 0.0
         val fuel = if (hasFuel) fuelLiters else null
         val kmPerL = if (hasFuel && fuelLiters > 0.0) distanceKm / fuelLiters else null
+        val bands = bandFuel.keys.sorted().mapNotNull { b ->
+            val t = bandTime[b] ?: 0.0
+            val f = bandFuel[b] ?: 0.0
+            if (t > 0.5) RpmBand(b, f / (t / 3600.0)) else null // L/h promedio en la banda
+        }
         val trip = Trip(
             id = System.currentTimeMillis(),
             dateMillis = System.currentTimeMillis(),
@@ -280,7 +307,8 @@ class TripService : Service() {
             maxKmh = maxKmh,
             fuelLiters = fuel,
             kmPerL = kmPerL,
-            route = ArrayList(routePoints)
+            route = ArrayList(routePoints),
+            rpmBands = bands
         )
         _trips.value = ServiceGraph.tripRepo.add(trip)
         _state.value = _state.value.copy(

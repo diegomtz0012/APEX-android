@@ -91,3 +91,17 @@ class FuelRateCommand : ObdCommand<Float>(
 ) {
     override fun decode(bytes: List<Int>): Float = (bytes[0] * 256 + bytes[1]) / 20f
 }
+
+/** PID 06 — Ajuste de mezcla a corto plazo (banco 1).  (A - 128) * 100 / 128  (%) */
+class ShortFuelTrimCommand : ObdCommand<Int>(
+    mode = Constants.ObdMode.LIVE_DATA, pid = "06", name = "STFT", unit = "%"
+) {
+    override fun decode(bytes: List<Int>): Int = (bytes[0] - 128) * 100 / 128
+}
+
+/** PID 07 — Ajuste de mezcla a largo plazo (banco 1).  (A - 128) * 100 / 128  (%) */
+class LongFuelTrimCommand : ObdCommand<Int>(
+    mode = Constants.ObdMode.LIVE_DATA, pid = "07", name = "LTFT", unit = "%"
+) {
+    override fun decode(bytes: List<Int>): Int = (bytes[0] - 128) * 100 / 128
+}

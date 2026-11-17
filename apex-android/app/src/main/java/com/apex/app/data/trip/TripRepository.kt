@@ -23,6 +23,12 @@ class TripRepository(context: Context) {
                     val p = routeArr.getJSONArray(j)
                     route.add(LatLng(p.getDouble(0), p.getDouble(1)))
                 }
+                val bandsArr = o.optJSONArray("rpmBands") ?: JSONArray()
+                val bands = ArrayList<RpmBand>(bandsArr.length())
+                for (k in 0 until bandsArr.length()) {
+                    val b = bandsArr.getJSONArray(k)
+                    bands.add(RpmBand(b.getInt(0), b.getDouble(1)))
+                }
                 list.add(
                     Trip(
                         id = o.getLong("id"),
@@ -33,7 +39,8 @@ class TripRepository(context: Context) {
                         maxKmh = o.getInt("maxKmh"),
                         fuelLiters = if (o.isNull("fuelLiters")) null else o.getDouble("fuelLiters"),
                         kmPerL = if (o.isNull("kmPerL")) null else o.getDouble("kmPerL"),
-                        route = route
+                        route = route,
+                        rpmBands = bands
                     )
                 )
             }
@@ -60,6 +67,11 @@ class TripRepository(context: Context) {
                 routeArr.put(JSONArray().put(p.lat).put(p.lon))
             }
             o.put("route", routeArr)
+            val bandsArr = JSONArray()
+            t.rpmBands.forEach { b ->
+                bandsArr.put(JSONArray().put(b.rpm).put(b.lPerH))
+            }
+            o.put("rpmBands", bandsArr)
             array.put(o)
         }
         runCatching { file.writeText(array.toString()) }
