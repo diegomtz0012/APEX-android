@@ -21,7 +21,8 @@ class VehicleProfileRepository(context: Context) {
                 weightKg = o.optString("weightKg", ""),
                 diesel = o.optBoolean("diesel", false),
                 vin = o.optString("vin", ""),
-                displacementL = o.optString("displacementL", "")
+                displacementL = o.optString("displacementL", ""),
+                fuelPricePerGallon = o.optString("fuelPricePerGallon", "")
             )
         } catch (e: Exception) {
             VehicleProfile()
@@ -38,6 +39,7 @@ class VehicleProfileRepository(context: Context) {
         o.put("diesel", profile.diesel)
         o.put("vin", profile.vin)
         o.put("displacementL", profile.displacementL)
+        o.put("fuelPricePerGallon", profile.fuelPricePerGallon)
         runCatching { file.writeText(o.toString()) }
     }
 }

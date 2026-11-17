@@ -105,3 +105,24 @@ class LongFuelTrimCommand : ObdCommand<Int>(
 ) {
     override fun decode(bytes: List<Int>): Int = (bytes[0] - 128) * 100 / 128
 }
+
+/** PID 5C — Temperatura del aceite del motor.  A - 40  (°C). No todos los carros la dan. */
+class OilTempCommand : ObdCommand<Int>(
+    mode = Constants.ObdMode.LIVE_DATA, pid = "5C", name = "Aceite", unit = "°C"
+) {
+    override fun decode(bytes: List<Int>): Int = bytes[0] - 40
+}
+
+/** PID 0A — Presión de combustible (manométrica).  A * 3  (kPa). Inyección a puerto. */
+class FuelPressureCommand : ObdCommand<Int>(
+    mode = Constants.ObdMode.LIVE_DATA, pid = "0A", name = "Presión comb.", unit = "kPa"
+) {
+    override fun decode(bytes: List<Int>): Int = bytes[0] * 3
+}
+
+/** PID 23 — Presión del riel de combustible (diésel/GDI).  (A*256 + B) * 10  (kPa). */
+class FuelRailPressureCommand : ObdCommand<Int>(
+    mode = Constants.ObdMode.LIVE_DATA, pid = "23", name = "Riel comb.", unit = "kPa"
+) {
+    override fun decode(bytes: List<Int>): Int = (bytes[0] * 256 + bytes[1]) * 10
+}

@@ -29,6 +29,24 @@ class TripRepository(context: Context) {
                     val b = bandsArr.getJSONArray(k)
                     bands.add(RpmBand(b.getInt(0), b.getDouble(1)))
                 }
+                val flagsArr = o.optJSONArray("routeFlags") ?: JSONArray()
+                val flags = ArrayList<Int>(flagsArr.length())
+                for (f in 0 until flagsArr.length()) flags.add(flagsArr.getInt(f))
+                val anomArr = o.optJSONArray("anomalies") ?: JSONArray()
+                val anomalies = ArrayList<Anomaly>(anomArr.length())
+                for (a in 0 until anomArr.length()) {
+                    val ao = anomArr.getJSONObject(a)
+                    anomalies.add(
+                        Anomaly(
+                            lat = ao.getDouble("lat"),
+                            lon = ao.getDouble("lon"),
+                            type = ao.optString("type", ""),
+                            label = ao.optString("label", ""),
+                            timeMillis = ao.optLong("timeMillis", 0L),
+                            address = ao.optString("address", "")
+                        )
+                    )
+                }
                 list.add(
                     Trip(
                         id = o.getLong("id"),
@@ -40,7 +58,25 @@ class TripRepository(context: Context) {
                         fuelLiters = if (o.isNull("fuelLiters")) null else o.getDouble("fuelLiters"),
                         kmPerL = if (o.isNull("kmPerL")) null else o.getDouble("kmPerL"),
                         route = route,
-                        rpmBands = bands
+                        rpmBands = bands,
+                        mode = o.optString("mode", ""),
+                        coolantMax = if (o.isNull("coolantMax")) null else o.optInt("coolantMax"),
+                        coolantMin = if (o.isNull("coolantMin")) null else o.optInt("coolantMin"),
+                        oilMax = if (o.isNull("oilMax")) null else o.optInt("oilMax"),
+                        oilMin = if (o.isNull("oilMin")) null else o.optInt("oilMin"),
+                        fuelPressureMin = if (o.isNull("fuelPressureMin")) null else o.optInt("fuelPressureMin"),
+                        fuelPressureAvg = if (o.isNull("fuelPressureAvg")) null else o.optInt("fuelPressureAvg"),
+                        idleMs = o.optLong("idleMs", 0L),
+                        stops = o.optInt("stops", 0),
+                        hardAccel = o.optInt("hardAccel", 0),
+                        hardBrake = o.optInt("hardBrake", 0),
+                        climbM = o.optInt("climbM", 0),
+                        dropM = o.optInt("dropM", 0),
+                        avgRpm = o.optInt("avgRpm", 0),
+                        ecoScore = o.optInt("ecoScore", 0),
+                        analysis = o.optString("analysis", ""),
+                        routeFlags = flags,
+                        anomalies = anomalies
                     )
                 )
             }
@@ -63,15 +99,40 @@ class TripRepository(context: Context) {
             o.put("fuelLiters", t.fuelLiters ?: JSONObject.NULL)
             o.put("kmPerL", t.kmPerL ?: JSONObject.NULL)
             val routeArr = JSONArray()
-            t.route.forEach { p ->
-                routeArr.put(JSONArray().put(p.lat).put(p.lon))
-            }
+            t.route.forEach { p -> routeArr.put(JSONArray().put(p.lat).put(p.lon)) }
             o.put("route", routeArr)
             val bandsArr = JSONArray()
-            t.rpmBands.forEach { b ->
-                bandsArr.put(JSONArray().put(b.rpm).put(b.lPerH))
-            }
+            t.rpmBands.forEach { b -> bandsArr.put(JSONArray().put(b.rpm).put(b.lPerH)) }
             o.put("rpmBands", bandsArr)
+            o.put("mode", t.mode)
+            o.put("coolantMax", t.coolantMax ?: JSONObject.NULL)
+            o.put("coolantMin", t.coolantMin ?: JSONObject.NULL)
+            o.put("oilMax", t.oilMax ?: JSONObject.NULL)
+            o.put("oilMin", t.oilMin ?: JSONObject.NULL)
+            o.put("fuelPressureMin", t.fuelPressureMin ?: JSONObject.NULL)
+            o.put("fuelPressureAvg", t.fuelPressureAvg ?: JSONObject.NULL)
+            o.put("idleMs", t.idleMs)
+            o.put("stops", t.stops)
+            o.put("hardAccel", t.hardAccel)
+            o.put("hardBrake", t.hardBrake)
+            o.put("climbM", t.climbM)
+            o.put("dropM", t.dropM)
+            o.put("avgRpm", t.avgRpm)
+            o.put("ecoScore", t.ecoScore)
+            o.put("analysis", t.analysis)
+            val flagsArr = JSONArray()
+            t.routeFlags.forEach { flagsArr.put(it) }
+            o.put("routeFlags", flagsArr)
+            val anomArr = JSONArray()
+            t.anomalies.forEach { a ->
+                anomArr.put(
+                    JSONObject()
+                        .put("lat", a.lat).put("lon", a.lon)
+                        .put("type", a.type).put("label", a.label)
+                        .put("timeMillis", a.timeMillis).put("address", a.address)
+                )
+            }
+            o.put("anomalies", anomArr)
             array.put(o)
         }
         runCatching { file.writeText(array.toString()) }
@@ -79,6 +140,14 @@ class TripRepository(context: Context) {
 
     fun add(trip: Trip): List<Trip> {
         val updated = (load() + trip).sortedByDescending { it.dateMillis }
+        save(updated)
+        return updated
+    }
+
+    /** Reemplaza un viaje por su versión actualizada (ej. con direcciones del Excel). */
+    fun update(trip: Trip): List<Trip> {
+        val updated = load().map { if (it.id == trip.id) trip else it }
+            .sortedByDescending { it.dateMillis }
         save(updated)
         return updated
     }

@@ -15,11 +15,12 @@ import kotlinx.coroutines.flow.callbackFlow
 /** Una muestra de velocidad del GPS, con su marca de tiempo en nanosegundos. */
 data class SpeedSample(val kmh: Float, val timeNanos: Long)
 
-/** Un punto del GPS con ubicación, velocidad y tiempo (para la ruta de viajes). */
+/** Un punto del GPS con ubicación, velocidad, altitud y tiempo (para la ruta de viajes). */
 data class GpsPoint(
     val lat: Double,
     val lon: Double,
     val kmh: Float,
+    val altM: Double,
     val timeMillis: Long
 )
 
@@ -91,6 +92,7 @@ class SpeedProvider(private val context: Context) {
                         lat = location.latitude,
                         lon = location.longitude,
                         kmh = kmh,
+                        altM = if (location.hasAltitude()) location.altitude else 0.0,
                         timeMillis = System.currentTimeMillis()
                     )
                 )

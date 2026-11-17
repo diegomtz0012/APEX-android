@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.apex.app.TripService
 import com.apex.app.data.trip.LatLng
 import com.apex.app.data.trip.Trip
+import com.apex.app.data.vehicle.VehicleProfileRepository
 import kotlinx.coroutines.flow.StateFlow
 
 data class TripUiState(
@@ -18,7 +19,11 @@ data class TripUiState(
     val fuelLiters: Double? = null,
     val kmPerL: Double? = null,
     val finished: Boolean = false,
-    val message: String? = null
+    val message: String? = null,
+    val mode: String = "",
+    val curRpm: Int = 0,
+    val curCoolant: Int? = null,
+    val finishedTripId: Long = 0L
 )
 
 /**
@@ -35,10 +40,14 @@ class TripViewModel(private val appContext: Context) : ViewModel() {
         TripService.refreshTrips()
     }
 
-    fun start() = TripService.startTrip(appContext)
+    fun start(mode: String) = TripService.startTrip(appContext, mode)
     fun stop() = TripService.stopTrip(appContext)
     fun clearTrips() = TripService.clearTrips()
     fun dismissSummary() = TripService.dismissSummary()
+
+    /** Precio del combustible por galón (del perfil), para calcular el costo. 0 si no está. */
+    fun fuelPricePerGallon(): Double =
+        VehicleProfileRepository(appContext).load().fuelPricePerGallon.toDoubleOrNull() ?: 0.0
 
     class Factory(private val appContext: Context) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")

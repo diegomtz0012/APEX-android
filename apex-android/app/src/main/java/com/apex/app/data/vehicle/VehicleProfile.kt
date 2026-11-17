@@ -9,5 +9,6 @@ data class VehicleProfile(
     val weightKg: String = "",
     val diesel: Boolean = false,
     val vin: String = "",
-    val displacementL: String = ""   // cilindrada en litros (para el consumo sin MAF)
+    val displacementL: String = "",  // cilindrada en litros (para el consumo sin MAF)
+    val fuelPricePerGallon: String = ""  // precio del combustible por galón (para el costo del viaje)
 )
